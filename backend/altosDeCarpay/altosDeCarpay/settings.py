@@ -61,6 +61,7 @@ REST_FRAMEWORK = {
         "anon": "60/min",
         "user": "240/min",
         "login": "5/min",
+        "registro": "5/hour",
     },
 }
 MIDDLEWARE = [
@@ -101,8 +102,8 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.environ.get("DB_NAME", "altos_de_carpay_db"),
-        "USER": os.environ.get("DB_USER", ""),
-        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "USER": os.environ.get("DB_USER", "postgres"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", "Hewi*Corp#7617"),
         "HOST": os.environ.get("DB_HOST", "localhost"),
         "PORT": os.environ.get("DB_PORT", "5432"),
         "CONN_MAX_AGE": 60,
@@ -152,5 +153,16 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MAILERS = {
     'default': {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+    },
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"simple": {"format": "{asctime} [{levelname}] {name}: {message}", "style": "{"}},
+    "handlers": {"consola": {"class": "logging.StreamHandler", "formatter": "simple"}},
+    "loggers": {
+        "seguridad": {"handlers": ["consola"], "level": "INFO", "propagate": False},
+        "reservas": {"handlers": ["consola"], "level": "INFO", "propagate": False},
     },
 }
