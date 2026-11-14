@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { registerCustomer } from '../api.js';
 
 export default function Register() {
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [mostrarConfirm, setMostrarConfirm] = useState(false);
   const [formulario, setFormulario] = useState({
     nombre: '',
-    apellidos: '',
+    apellido_paterno: '',
+    apellido_materno: '',
     correo: '',
+    rut: '',
     telefono: '',
     password: '',
     confirmPassword: '',
     terminos: false
   });
+  const [error, setError] = useState('');
+  const [enviando, setEnviando] = useState(false);
 
   const navigate = useNavigate();
 
@@ -25,14 +30,31 @@ export default function Register() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (formulario.password !== formulario.confirmPassword) {
-      alert("Las contraseñas no coinciden");
+      setError('Las contraseñas no coinciden.');
       return;
     }
-    // Simula registro exitoso y pasa a login o reserva
-    navigate('/login');
+    setError('');
+    setEnviando(true);
+    try {
+      await registerCustomer({
+        nombre: formulario.nombre,
+        apellido_paterno: formulario.apellido_paterno,
+        apellido_materno: formulario.apellido_materno,
+        correo: formulario.correo,
+        rut: formulario.rut,
+        telefono: formulario.telefono,
+        password: formulario.password,
+        acepta_politica_datos: formulario.terminos,
+      });
+      navigate('/login', { state: { registroExitoso: true } });
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
@@ -100,7 +122,7 @@ export default function Register() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             
-            {/* Nombre y Apellidos */}
+            {/* Nombre y apellidos */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-semibold text-gray-700 block mb-1">Nombre *</label>
@@ -115,17 +137,29 @@ export default function Register() {
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">Apellidos *</label>
+                <label className="text-xs font-semibold text-gray-700 block mb-1">Apellido paterno *</label>
                 <input 
                   type="text" 
-                  name="apellidos"
+                  name="apellido_paterno"
                   required
-                  value={formulario.apellidos}
+                  value={formulario.apellido_paterno}
                   onChange={handleChange}
-                  placeholder="Tus apellidos" 
+                  placeholder="Apellido paterno"
                   className="w-full text-sm border border-sand-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-forest-800 bg-sand-50/20"
                 />
               </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-700 block mb-1">Apellido materno *</label>
+              <input
+                type="text"
+                name="apellido_materno"
+                required
+                value={formulario.apellido_materno}
+                onChange={handleChange}
+                placeholder="Apellido materno"
+                className="w-full text-sm border border-sand-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-forest-800 bg-sand-50/20"
+              />
             </div>
 
             {/* Correo electrónico */}
@@ -141,6 +175,20 @@ export default function Register() {
                 className="w-full text-sm border border-sand-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-forest-800 bg-sand-50/20"
               />
               <span className="text-[10px] text-gray-400 mt-1 block">Aquí recibirás las confirmaciones de reserva y pago.</span>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-700 block mb-1">RUT *</label>
+              <input
+                type="text"
+                name="rut"
+                required
+                maxLength={15}
+                value={formulario.rut}
+                onChange={handleChange}
+                placeholder="12345678-9"
+                className="w-full text-sm border border-sand-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-forest-800 bg-sand-50/20"
+              />
             </div>
 
             {/* Teléfono */}
@@ -222,11 +270,14 @@ export default function Register() {
               </span>
             </div>
 
+            {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+
             <button 
               type="submit" 
+              disabled={enviando}
               className="w-full bg-forest-800 text-white font-medium text-sm py-3.5 rounded-xl hover:bg-forest-900 transition-colors shadow-sm mt-3"
             >
-              Crear mi cuenta de cliente
+              {enviando ? 'Creando cuenta…' : 'Crear mi cuenta de cliente'}
             </button>
           </form>
 

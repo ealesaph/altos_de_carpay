@@ -153,7 +153,7 @@ class ReservaDetalleSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_hora_fin(self, reserva):
-        return timezone.localtime(reserva.fin).strftime("%H:%M")
+        return timezone.localtime(reserva.fin).strftime("%H:%M") if reserva.fin else None
 
 class CambioEstadoSerializer(serializers.Serializer):
     estado = serializers.ChoiceField(choices=Reserva.Estado.choices)
@@ -184,6 +184,8 @@ class ReviewSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"evaluado": "Solo puede evaluar a un administrador del recinto."})
         if reserva.estado not in (Reserva.Estado.CONFIRMADO, Reserva.Estado.EN_PROCESO):
             raise serializers.ValidationError("Solo se pueden evaluar reservas confirmadas.")
+        if reserva.inicio is None:
+            raise serializers.ValidationError("La reserva no tiene una hora de inicio registrada.")
         if reserva.inicio > timezone.now():
             raise serializers.ValidationError("La reseña puede emitirse una vez iniciado el evento.")
         if Review.objects.filter(reserva=reserva, evaluador=usuario).exists():

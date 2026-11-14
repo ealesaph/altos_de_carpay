@@ -1,34 +1,62 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Check, ArrowRight, XCircle, CheckCircle } from 'lucide-react';
+import { createPayment, getReservation } from '../api.js';
 
 export default function PaymentAuth() {
   const navigate = useNavigate();
   const location = useLocation();
+  const datosReserva = location.state;
+  const [error, setError] = useState('');
+  const [procesando, setProcesando] = useState(false);
 
-  const datosReserva = location.state || {
-    nombreEspacio: 'Terraza superior',
-    precioTotal: 300000,
-    montoAPagarHoy: 90000,
-    saldoPendiente: 210000,
-    tipoPago: 'anticipo',
-    img: 'https://images.unsplash.com/photo-1544984243-ec57ea16fe25?auto=format&fit=crop&w=800&q=80',
-    fecha: '2026-12-12',
-    bloque: '13:00–18:00 (5 horas)',
-    nombreEvento: 'Un almuerzo en familia',
-    asistentes: '30'
+  useEffect(() => {
+    if (!datosReserva?.id_reserva) navigate('/reservar/espacio', { replace: true });
+  }, [datosReserva, navigate]);
+
+  if (!datosReserva?.id_reserva) return null;
+
+  const registrarPago = async (simularRechazo) => {
+    setError('');
+    setProcesando(true);
+    try {
+      const pago = await createPayment(datosReserva.id_reserva, {
+        tipo_pago: datosReserva.tipoPago,
+        metodo_pago: 'Webpay',
+        simular_rechazo: simularRechazo,
+      });
+      if (simularRechazo) {
+        navigate('/simulador/tarjeta', {
+          state: { ...datosReserva, rechazoSimulado: true },
+        });
+        return;
+      }
+
+      const reserva = await getReservation(datosReserva.id_reserva);
+      navigate('/reservar/confirmacion', {
+        state: {
+          ...datosReserva,
+          ...reserva,
+          precioTotal: Number(reserva.monto_total),
+          montoAPagarHoy: Number(pago.monto),
+          saldoPendiente: Number(reserva.saldo_pendiente),
+          nombreEvento: `Reserva N° ${reserva.id_reserva}`,
+          nombreEspacio: reserva.sectores.map((sector) => sector.nombre).join(', '),
+          bloque: `${reserva.hora_inicio} · ${reserva.horas_reservadas} horas`,
+        },
+      });
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setProcesando(false);
+    }
   };
 
-  const handleAprobar = () => {
-    navigate('/reservar/confirmacion', {
-      state: datosReserva
-    });
-  };
-
-  const handleRechazar = () => {
-    alert("Simulación rechazada: no se realizó ningún cargo ni confirmación.");
-    navigate('/simulador/tarjeta', { state: datosReserva });
-  };
+  const conceptoPago = datosReserva.tipoPago === 'Anticipo'
+    ? 'Anticipo'
+    : datosReserva.tipoPago === 'Saldo'
+      ? 'Pago de saldo'
+      : 'Pago total';
 
   return (
     <div className="min-h-screen bg-sand-50 text-gray-800 font-sans antialiased selection:bg-forest-100 selection:text-forest-900">
@@ -47,7 +75,7 @@ export default function PaymentAuth() {
 
           <div className="flex items-center gap-6 text-xs text-gray-600 font-medium">
             <span className="bg-sand-100 text-forest-900 px-3 py-1.5 rounded-full font-semibold">
-              Mi cuenta · Camila
+              Reserva N° {datosReserva.id_reserva}
             </span>
             <Link to="/mis-reservas" state={datosReserva} className="text-forest-800 hover:underline">
               Mis reservas
@@ -121,8 +149,8 @@ export default function PaymentAuth() {
             <div className="grid grid-cols-2 gap-4 text-xs bg-sand-50/30 p-4 rounded-xl border border-sand-100">
               <div>
                 <span className="text-gray-400 block mb-0.5">Concepto</span>
-                <span className="font-semibold text-gray-700">{datosReserva.tipoPago === 'anticipo' ? 'Anticipo reserva (30%)' : 'Pago total (100%)'}</span>
-                <span className="text-[11px] text-gray-400 block mt-1">Ref: RES-0261</span>
+                <span className="font-semibold text-gray-700">{conceptoPago}</span>
+                <span className="text-[11px] text-gray-400 block mt-1">Ref: RES-{datosReserva.id_reserva}</span>
               </div>
               <div className="text-right">
                 <span className="text-gray-400 block mb-0.5">Tarjeta de prueba</span>
@@ -141,33 +169,37 @@ export default function PaymentAuth() {
                   <CheckCircle size={16} className="text-green-700 shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold block">Si apruebas → paso 4 · Confirmación</span>
-                    <span>Reserva confirmada con abono de ${Number(datosReserva.montoAPagarHoy || 0).toLocaleString('es-CL')} y saldo pendiente de ${Number(datosReserva.saldoPendiente || 0).toLocaleString('es-CL')}.</span>
+                    <span>Se registrará un pago de ${Number(datosReserva.montoAPagarHoy || 0).toLocaleString('es-CL')} y quedará un saldo de ${Number(datosReserva.saldoPendiente || 0).toLocaleString('es-CL')}.</span>
                   </div>
                 </div>
 
                 <div className="p-3.5 rounded-xl border border-red-200 bg-red-50/50 text-xs text-red-900 flex items-start gap-2.5">
                   <XCircle size={16} className="text-red-700 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold block">Si rechazas → sin abono ni confirmación</span>
-                    <span>Volverás a los datos de prueba sin registrar reserva.</span>
+                    <span className="font-bold block">Si rechazas → el pago queda rechazado</span>
+                    <span>La reserva seguirá pendiente y no se registrará un abono.</span>
                   </div>
                 </div>
               </div>
             </div>
 
+            {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
               <button 
                 type="button"
-                onClick={handleAprobar}
+                onClick={() => registrarPago(false)}
+                disabled={procesando}
                 className="bg-forest-800 text-white font-medium text-sm py-3.5 px-4 rounded-xl hover:bg-forest-900 transition-colors shadow-sm flex items-center justify-center gap-2"
               >
-                Simular aprobación del pago
+                {procesando ? 'Registrando pago…' : 'Simular aprobación del pago'}
                 <ArrowRight size={15} />
               </button>
 
               <button 
                 type="button"
-                onClick={handleRechazar}
+                onClick={() => registrarPago(true)}
+                disabled={procesando}
                 className="border border-sand-200 text-gray-700 bg-white hover:bg-sand-50 font-medium text-sm py-3.5 px-4 rounded-xl transition-colors"
               >
                 Rechazar simulación
@@ -187,10 +219,10 @@ export default function PaymentAuth() {
 
             <div>
               <h3 className="font-serif text-xl font-semibold text-forest-900">
-                {datosReserva.nombreEvento}
+                Reserva N° {datosReserva.id_reserva}
               </h3>
-              <p className="text-xs text-gray-700 font-medium mt-0.5">{datosReserva.nombreEspacio} · La Reina, Santiago</p>
-              <p className="text-xs text-gray-500">{datosReserva.fecha} · {datosReserva.bloque}</p>
+              <p className="text-xs text-gray-700 font-medium mt-0.5">{datosReserva.nombreEspacio}</p>
+              <p className="text-xs text-gray-500">{datosReserva.fecha} · {datosReserva.hora_inicio} · {datosReserva.horas_reservadas} horas</p>
             </div>
 
             <div className="bg-sand-50 p-4 rounded-2xl border border-sand-200/80">

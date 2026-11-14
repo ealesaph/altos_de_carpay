@@ -35,6 +35,8 @@ def sector_ocupado(sector, inicio, fin):
         reserva = existente.reserva
         if reserva.estado == Reserva.Estado.PENDIENTE and reserva.plazo_anticipo_vencido:
             continue
+        if reserva.hora_inicio is None:
+            return True
         if existente.inicio < fin and existente.fin > inicio:
             return True
     return False

@@ -53,7 +53,12 @@ def _celda_segura(valor):
     texto = "" if valor is None else str(valor)
     return "'" + texto if texto[:1] in ("=", "+", "-", "@", "\t", "\r") else texto
 
-class ReservaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class ReservaViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
     serializer_class = ReservaDetalleSerializer
     permission_classes = [IsAuthenticated]
 
@@ -67,6 +72,7 @@ class ReservaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
                 Value(Decimal("0.00")),
                 output_field=DecimalField(max_digits=12, decimal_places=2),
             ))
+            .order_by("-fecha", "-hora_inicio", "-id_reserva")
         )
         if not usuario.es_admin:
             return consulta.filter(usuario=usuario)  # Un cliente jamás ve reservas ajenas
@@ -121,7 +127,8 @@ class ReservaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
                            "Monto total", "Monto pagado", "Saldo pendiente"])
         for r in self.get_queryset():
             escritor.writerow([_celda_segura(v) for v in (
-                r.pk, r.usuario.nombre_completo, r.usuario.correo, r.fecha, r.hora_inicio.strftime("%H:%M"),
+                r.pk, r.usuario.nombre_completo, r.usuario.correo, r.fecha,
+                r.hora_inicio.strftime("%H:%M") if r.hora_inicio else "",
                 r.horas_reservadas, r.estado, r.monto_total, r.monto_pagado, r.saldo_pendiente)])
         return respuesta
 
