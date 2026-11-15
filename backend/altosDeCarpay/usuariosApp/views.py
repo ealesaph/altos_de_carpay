@@ -6,9 +6,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-
 from altosDeCarpayApp.permissions import EsAdministrador
-
 from .models import Usuario
 from .serializers import (
     CambioPasswordSerializer,

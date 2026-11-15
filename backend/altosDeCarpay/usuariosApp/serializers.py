@@ -9,8 +9,6 @@ from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-
-
 from .models import Usuario
 from .validators import normalizar_rut, validar_rut
 

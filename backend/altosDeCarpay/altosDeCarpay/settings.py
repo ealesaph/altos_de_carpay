@@ -8,28 +8,47 @@ https://docs.djangoproject.com/en/6.1/topics/settings/
 
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
+
+--- Modificado para la plataforma web de Altos de Carpay ---
+Los valores sensibles o que cambian entre desarrollo y producción se leen desde variables de
+entorno (archivo .env). Nunca escriba contraseñas ni claves en este archivo.
 """
-
-from pathlib import Path
 import os
+from datetime import timedelta
+from decimal import Decimal
+from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-sj27_!)!ij@ljrye@hker3r^g!n&0ys6uh5c2b%8dnx2l7g&n#'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
+def env_bool(nombre, por_defecto=False):
+    valor = os.environ.get(nombre)
+    if valor is None:
+        return por_defecto
+    return valor.strip().lower() in {'1', 'true', 'yes', 'si', 'sí'}
 
 
-# Application definition
+def env_lista(nombre, por_defecto=''):
+    return [v.strip() for v in os.environ.get(nombre, por_defecto).split(',') if v.strip()]
+
+
+
+DEBUG = env_bool('DJANGO_DEBUG', False)
+
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-l&o+z4u*n=*6eeq#@nu4^j-mz_!#cum%q$&rm*w)ey#o*73a8f'
+    else:
+        raise ImproperlyConfigured('Defina la variable de entorno DJANGO_SECRET_KEY.')
+
+ALLOWED_HOSTS = env_lista('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ADMIN_URL = os.environ.get('ADMIN_URL', 'admin/')
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -42,35 +61,11 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-    'altosDeCarpayApp', 
     'usuariosApp.apps.UsuariosAppConfig',
     'reservasApp',
     'consultasApp',
-
+    'auditoriaApp.apps.AuditoriaAppConfig',
 ]
-
-_renderizadores = ["rest_framework.renderers.JSONRenderer"]
-if DEBUG:
-    _renderizadores.append("rest_framework.renderers.BrowsableAPIRenderer")
-
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": ("usuariosApp.authentication.JWTAuthenticationAuditada",),
-    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
-    "DEFAULT_RENDERER_CLASSES": tuple(_renderizadores),
-    "DEFAULT_PARSER_CLASSES": ("rest_framework.parsers.JSONParser",),
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 20,
-    "DEFAULT_THROTTLE_CLASSES": (
-        "rest_framework.throttling.AnonRateThrottle",
-        "rest_framework.throttling.UserRateThrottle",
-    ),
-    "DEFAULT_THROTTLE_RATES": {
-        "anon": "60/min",
-        "user": "240/min",
-        "login": "5/min",
-        "registro": "5/hour",
-    },
-}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -85,7 +80,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'altosDeCarpay.urls'
-WSGI_APPLICATION = "altosDeCarpay.wsgi.application"
+WSGI_APPLICATION = 'altosDeCarpay.wsgi.application'
 
 TEMPLATES = [
     {
@@ -103,28 +98,23 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'altosDeCarpay.wsgi.application'
-
-
-# Database
-# https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "altos_de_carpay_db"),
-        "USER": os.environ.get("DB_USER", "postgres"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", "Hewi*Corp#7617"),
-        "HOST": os.environ.get("DB_HOST", "localhost"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
-        "CONN_MAX_AGE": 60,
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'altos_de_carpay_db'),
+        'USER': os.environ.get('DB_USER', ''),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+        'CONN_MAX_AGE': 60,
     }
 }
 
+
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
-# Password validation
-# https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
+
 AUTH_USER_MODEL = 'usuariosApp.Usuario'
 
 PASSWORD_HASHERS = [
@@ -142,51 +132,97 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+_renderizadores = ['rest_framework.renderers.JSONRenderer']
+if DEBUG:
+    _renderizadores.append('rest_framework.renderers.BrowsableAPIRenderer')
 
-# Internationalization
-# https://docs.djangoproject.com/en/6.1/topics/i18n/
-
-LANGUAGE_CODE = "es"
-
-TIME_ZONE = "America/Santiago"
-
-USE_I18N = True
-
-USE_TZ = True
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.1/howto/static-files/
-
-STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
-# Email
-# https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
-if os.environ.get("EMAIL_HOST"):
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-    EMAIL_HOST = os.environ["EMAIL_HOST"]
-    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
-    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
-    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-    EMAIL_USE_TLS = True
-else:
-    # Sin servidor SMTP configurado los correos se imprimen en la consola.
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-responder@altosdecarpay.cl")
-
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': ('usuariosApp.authentication.JWTAuthenticationAuditada',),
+    'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticated',),
+    'DEFAULT_RENDERER_CLASSES': tuple(_renderizadores),
+    'DEFAULT_PARSER_CLASSES': ('rest_framework.parsers.JSONParser',),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '60/min',
+        'user': '240/min',
+        'login': '5/min',
+        'registro': '5/hour',
+        'consulta': '10/hour',
     },
 }
+if os.environ.get('NUM_PROXIES'):
+    REST_FRAMEWORK['NUM_PROXIES'] = int(os.environ['NUM_PROXIES'])
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': False,
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id_usuario',
+    'USER_ID_CLAIM': 'user_id',
+}
+
+
+_origenes_dev = 'http://localhost:5173,http://localhost:3000' if DEBUG else ''
+CORS_ALLOWED_ORIGINS = env_lista('CORS_ALLOWED_ORIGINS', _origenes_dev)
+CORS_ALLOW_CREDENTIALS = False 
+CSRF_TRUSTED_ORIGINS = env_lista('CSRF_TRUSTED_ORIGINS', _origenes_dev)
+
+
+X_FRAME_OPTIONS = 'DENY'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
+if not DEBUG:
+    SECURE_SSL_REDIRECT = env_bool('DJANGO_SSL_REDIRECT', True)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    if env_bool('DJANGO_DETRAS_DE_PROXY', False):
+        SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+
+LANGUAGE_CODE = 'es'
+TIME_ZONE = 'America/Santiago'
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+
+if os.environ.get('EMAIL_HOST'):
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.environ['EMAIL_HOST']
+    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+    EMAIL_USE_TLS = True
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-responder@altosdecarpay.cl')
+
+
+ANTICIPO_PORCENTAJE = Decimal(os.environ.get('ANTICIPO_PORCENTAJE', '30'))
+PLAZO_PAGO_ANTICIPO_HORAS = int(os.environ.get('PLAZO_PAGO_ANTICIPO_HORAS', '24'))
+PAGOS_SIMULADOR_PERMITIR_RECHAZO = env_bool('PAGOS_SIMULADOR_PERMITIR_RECHAZO', DEBUG)
+
 
 LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {"simple": {"format": "{asctime} [{levelname}] {name}: {message}", "style": "{"}},
-    "handlers": {"consola": {"class": "logging.StreamHandler", "formatter": "simple"}},
-    "loggers": {
-        "seguridad": {"handlers": ["consola"], "level": "INFO", "propagate": False},
-        "reservas": {"handlers": ["consola"], "level": "INFO", "propagate": False},
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {'simple': {'format': '{asctime} [{levelname}] {name}: {message}', 'style': '{'}},
+    'handlers': {'consola': {'class': 'logging.StreamHandler', 'formatter': 'simple'}},
+    'loggers': {
+        'seguridad': {'handlers': ['consola'], 'level': 'INFO', 'propagate': False},
+        'reservas': {'handlers': ['consola'], 'level': 'INFO', 'propagate': False},
     },
 }
