@@ -1,0 +1,71 @@
+services:
+  # 1. Base de datos PostgreSQL Unificada
+  db:
+    image: postgres:16-alpine
+    container_name: carpay_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-altos_de_carpay_db}
+      POSTGRES_USER: ${POSTGRES_USER:-carpay_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CarpaySecurePass2026!}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - carpay_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-carpay_admin} -d ${POSTGRES_DB:-altos_de_carpay_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # 2. Servidor de Aplicación / Backend Django REST API
+  backend:
+    build:
+      context: ./backend/altosDeCarpay
+      dockerfile: Dockerfile
+    container_name: carpay_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-altos_de_carpay_db}
+      DB_USER: ${POSTGRES_USER:-carpay_admin}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-CarpaySecurePass2026!}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+    volumes:
+      - ./backend/altosDeCarpay:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - carpay_network
+
+  # 3. Servidor Web Frontend React + Nginx (Proxy Inverso a Backend)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: carpay_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - carpay_network
+
+volumes:
+  postgres_data:
+    name: altos_de_carpay_repo_postgres_data
+
+networks:
+  carpay_network:
+    name: carpay_network
+    driver: bridge

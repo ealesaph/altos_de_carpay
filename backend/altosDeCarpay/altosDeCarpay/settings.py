@@ -46,7 +46,7 @@ if not SECRET_KEY:
     else:
         raise ImproperlyConfigured('Defina la variable de entorno DJANGO_SECRET_KEY.')
 
-ALLOWED_HOSTS = env_lista('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = env_lista('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,10.0.2.2,backend')
 ADMIN_URL = os.environ.get('ADMIN_URL', 'admin/')
 
 
@@ -102,11 +102,11 @@ TEMPLATES = [
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'altos_de_carpay_db'),
-        'USER': os.environ.get('DB_USER', ''),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'NAME': os.environ.get('DB_NAME') or os.environ.get('POSTGRES_DB', 'altos_de_carpay_db'),
+        'USER': os.environ.get('DB_USER') or os.environ.get('POSTGRES_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD') or os.environ.get('POSTGRES_PASSWORD', 'Hewi*Corp#7617'),
+        'HOST': os.environ.get('DB_HOST') or os.environ.get('POSTGRES_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT') or os.environ.get('POSTGRES_PORT', '5432'),
         'CONN_MAX_AGE': 60,
     }
 }
@@ -171,7 +171,7 @@ SIMPLE_JWT = {
 }
 
 
-_origenes_dev = 'http://localhost:5173,http://localhost:3000' if DEBUG else ''
+_origenes_dev = 'http://localhost:5173,http://localhost:3000,http://localhost,http://127.0.0.1,http://10.0.2.2:8000' if DEBUG else ''
 CORS_ALLOWED_ORIGINS = env_lista('CORS_ALLOWED_ORIGINS', _origenes_dev)
 CORS_ALLOW_CREDENTIALS = False 
 CSRF_TRUSTED_ORIGINS = env_lista('CSRF_TRUSTED_ORIGINS', _origenes_dev)
