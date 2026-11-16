@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Check, Lock, ExternalLink } from 'lucide-react';
 
@@ -6,31 +6,30 @@ export default function CheckoutReview() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const datosReserva = location.state || {
-    nombreEspacio: 'Terraza superior',
-    precioTotal: 300000,
-    anticipo: 90000,
-    img: 'https://images.unsplash.com/photo-1544984243-ec57ea16fe25?auto=format&fit=crop&w=800&q=80',
-    fecha: '2026-12-12',
-    bloque: '13:00–18:00 (5 horas)',
-    nombreEvento: 'Un almuerzo en familia',
-    asistentes: '30'
-  };
-
-  const [tipoPago, setTipoPago] = useState('anticipo');
+  const datosReserva = location.state;
+  const [tipoPago, setTipoPago] = useState('Anticipo');
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [error, setError] = useState('');
 
-  const precioTotal = datosReserva.precioTotal;
-  const montoAnticipo = datosReserva.anticipo;
-  const saldoPendiente = tipoPago === 'anticipo' ? (precioTotal - montoAnticipo) : 0;
-  const montoAPagarHoy = tipoPago === 'anticipo' ? montoAnticipo : precioTotal;
+  useEffect(() => {
+    if (!datosReserva?.id_reserva) navigate('/reservar/espacio', { replace: true });
+  }, [datosReserva, navigate]);
+
+  if (!datosReserva?.id_reserva) return null;
+
+  const precioTotal = Number(datosReserva.monto_total);
+  const montoAnticipo = Number(datosReserva.monto_anticipo);
+  const esAnticipo = tipoPago === 'Anticipo';
+  const saldoPendiente = esAnticipo ? precioTotal - montoAnticipo : 0;
+  const montoAPagarHoy = esAnticipo ? montoAnticipo : precioTotal;
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!aceptaTerminos) {
-      alert("Debes aceptar las condiciones de arriendo y plazos de pago para continuar.");
+      setError('Debes aceptar las condiciones de arriendo y plazos de pago para continuar.');
       return;
     }
+    setError('');
     navigate('/simulador/tarjeta', {
       state: {
         ...datosReserva,
@@ -61,7 +60,7 @@ export default function CheckoutReview() {
             <span className="hidden sm:inline">Cómo reservar</span>
             <span className="hidden sm:inline">Contacto</span>
             <span className="bg-sand-100 text-forest-900 px-3 py-1.5 rounded-full font-semibold">
-              Mi cuenta · Camila
+              Mi cuenta · {datosReserva.cliente}
             </span>
             <Link to="/mis-reservas" state={datosReserva} className="text-forest-800 hover:underline">
               Mis reservas
@@ -117,7 +116,7 @@ export default function CheckoutReview() {
             Todo listo para tu encuentro
           </h1>
           <p className="text-xs text-gray-500">
-            Revisa los detalles y elige cuánto quieres pagar hoy. Reserva de ejemplo · montos en CLP.
+            Revisa los detalles de la reserva guardada y elige cuánto pagar hoy.
           </p>
         </div>
 
@@ -142,7 +141,7 @@ export default function CheckoutReview() {
                   <input 
                     type="text" 
                     readOnly 
-                    value={datosReserva.nombreEvento} 
+                    value={`Reserva N° ${datosReserva.id_reserva}`}
                     className="w-full text-sm border border-sand-200 rounded-xl px-4 py-2.5 bg-sand-50/40 text-gray-700 cursor-not-allowed font-medium" 
                   />
                 </div>
@@ -166,14 +165,14 @@ export default function CheckoutReview() {
                     <input 
                       type="text" 
                       readOnly 
-                      value={`${datosReserva.asistentes} personas · aforo referencial`} 
+                      value={`${datosReserva.fecha} · ${datosReserva.hora_inicio} · ${datosReserva.horas_reservadas} horas`}
                       className="w-full text-sm border border-sand-200 rounded-xl px-4 py-2.5 bg-sand-50/40 text-gray-700 cursor-not-allowed font-medium" 
                     />
                   </div>
                 </div>
 
                 <p className="text-xs text-gray-500 pt-2 flex items-center gap-2">
-                  <span>👤</span> Camila Rojas · camila@ejemplo.cl · Datos de ejemplo
+                  <span>👤</span> {datosReserva.cliente} · {datosReserva.correo_cliente}
                 </p>
               </div>
             </div>
@@ -188,9 +187,9 @@ export default function CheckoutReview() {
                 
                 {/* 30% Anticipo */}
                 <div 
-                  onClick={() => setTipoPago('anticipo')}
+                  onClick={() => setTipoPago('Anticipo')}
                   className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${
-                    tipoPago === 'anticipo' 
+                    esAnticipo
                       ? 'border-forest-800 bg-forest-50/40 shadow-sm' 
                       : 'border-sand-200 hover:border-gray-300'
                   }`}
@@ -199,8 +198,8 @@ export default function CheckoutReview() {
                     <input 
                       type="radio" 
                       name="tipoPago" 
-                      checked={tipoPago === 'anticipo'} 
-                      onChange={() => setTipoPago('anticipo')} 
+                      checked={esAnticipo}
+                      onChange={() => setTipoPago('Anticipo')}
                       className="text-forest-800"
                     />
                     <span>Anticipo · 30%</span>
@@ -215,9 +214,9 @@ export default function CheckoutReview() {
 
                 {/* 100% Pago total */}
                 <div 
-                  onClick={() => setTipoPago('total')}
+                  onClick={() => setTipoPago('Total')}
                   className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${
-                    tipoPago === 'total' 
+                    !esAnticipo
                       ? 'border-forest-800 bg-forest-50/40 shadow-sm' 
                       : 'border-sand-200 hover:border-gray-300'
                   }`}
@@ -226,8 +225,8 @@ export default function CheckoutReview() {
                     <input 
                       type="radio" 
                       name="tipoPago" 
-                      checked={tipoPago === 'total'} 
-                      onChange={() => setTipoPago('total')} 
+                      checked={!esAnticipo}
+                      onChange={() => setTipoPago('Total')}
                       className="text-forest-800"
                     />
                     <span>Pago total · 100%</span>
@@ -242,12 +241,12 @@ export default function CheckoutReview() {
 
               </div>
 
-              {tipoPago === 'anticipo' && (
+              {esAnticipo && (
                 <div className="p-4 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs flex items-start gap-3 leading-relaxed">
                   <span className="text-base">⏳</span>
                   <div>
                     <span className="font-semibold block mb-0.5">Plazo límite de pago restante:</span>
-                    Con anticipo, paga el saldo de <strong>${(precioTotal - montoAnticipo).toLocaleString('es-CL')}</strong> hasta 24 horas antes del encuentro fijado para el {datosReserva.fecha}. Si no completas el pago en ese plazo, la reserva caduca por impago.
+                    Con anticipo, el saldo de <strong>${(precioTotal - montoAnticipo).toLocaleString('es-CL')}</strong> debe pagarse antes del evento ({datosReserva.fecha}). Si no se completa dentro del plazo configurado, la reserva puede caducar por impago.
                   </div>
                 </div>
               )}
@@ -284,17 +283,17 @@ export default function CheckoutReview() {
                 {datosReserva.nombreEspacio}
               </h3>
               <p className="text-xs text-gray-500 mt-1">
-                {datosReserva.fecha} · {datosReserva.bloque}
+                {datosReserva.fecha} · {datosReserva.hora_inicio} · {datosReserva.horas_reservadas} horas
               </p>
               <p className="text-xs text-gray-500">
-                La Reina, Santiago · {datosReserva.asistentes} personas
+                {datosReserva.cliente}
               </p>
             </div>
 
             {/* Desglose */}
             <div className="space-y-2 text-xs">
               <div className="flex justify-between text-gray-600">
-                <span>Arriendo · 5 horas</span>
+                <span>Arriendo · {datosReserva.horas_reservadas} horas</span>
                 <span>${precioTotal.toLocaleString('es-CL')}</span>
               </div>
               <div className="flex justify-between text-gray-600">
@@ -310,8 +309,8 @@ export default function CheckoutReview() {
             {/* Monto seleccionado */}
             <div className="bg-sand-50 p-4 rounded-2xl border border-sand-200/80 flex justify-between items-center">
               <div>
-                <span className="text-xs text-gray-600 block">A pagar hoy · {tipoPago === 'anticipo' ? '30%' : '100%'}</span>
-                <span className="text-xs text-gray-400">Saldo posterior: {tipoPago === 'anticipo' ? '70%' : '0%'}</span>
+                <span className="text-xs text-gray-600 block">A pagar hoy · {esAnticipo ? 'anticipo' : 'total'}</span>
+                <span className="text-xs text-gray-400">Saldo posterior: ${saldoPendiente.toLocaleString('es-CL')}</span>
               </div>
               <div className="text-right">
                 <span className="text-2xl font-serif font-bold text-forest-900">
@@ -325,6 +324,7 @@ export default function CheckoutReview() {
 
             {/* Términos y botón */}
             <div className="space-y-2 pt-2">
+              {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
               <label className="flex items-start gap-2.5 cursor-pointer">
                 <input 
                   type="checkbox" 
@@ -347,7 +347,7 @@ export default function CheckoutReview() {
               onClick={handleSubmit}
               className="w-full bg-forest-800 text-white font-medium text-sm py-4 rounded-xl hover:bg-forest-900 transition-colors shadow-sm"
             >
-              Pagar {tipoPago === 'anticipo' ? 'anticipo' : 'total'} · ${montoAPagarHoy.toLocaleString('es-CL')}
+              Pagar {esAnticipo ? 'anticipo' : 'total'} · ${montoAPagarHoy.toLocaleString('es-CL')}
             </button>
 
           </div>

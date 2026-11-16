@@ -21,4 +21,4 @@ RUN dos2unix /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 EXPOSE 8000
 
-ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]
+CMD ["/bin/sh", "-c", "dos2unix /app/entrypoint.sh && /bin/sh /app/entrypoint.sh"]

@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, ArrowLeft } from 'lucide-react';
+import { login } from '../api.js';
 
 export default function Login() {
   const [mostrarPassword, setMostrarPassword] = useState(false);
-  const [credenciales, setCredenciales] = useState({ usuario: '', password: '' });
+  const [credenciales, setCredenciales] = useState({ correo: '', password: '' });
+  const [error, setError] = useState('');
+  const [enviando, setEnviando] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleChange = (e) => {
     setCredenciales({
@@ -14,13 +18,19 @@ export default function Login() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simulación de redirección según el usuario
-    if (credenciales.usuario.toLowerCase().includes('admin')) {
-      navigate('/admin');
-    } else {
-      navigate('/reservar/pago');
+    setError('');
+    setEnviando(true);
+    try {
+      const usuario = await login(credenciales.correo, credenciales.password);
+      navigate(
+        location.state?.next || (usuario.rol === 'Admin' ? '/admin' : '/reservar/espacio'),
+      );
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setEnviando(false);
     }
   };
 
@@ -78,19 +88,22 @@ export default function Login() {
           <p className="text-xs text-gray-500 mb-8 leading-relaxed">
             Inicia sesión para continuar con tu reserva o revisar tus próximos encuentros.
           </p>
+          {location.state?.registroExitoso && (
+            <p className="text-sm text-green-700 mb-4">Cuenta creada. Inicia sesión para continuar.</p>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="text-xs font-semibold text-gray-700 block mb-1.5">
-                Usuario o correo
+                Correo electrónico
               </label>
               <input 
-                type="text" 
-                name="usuario" 
+                name="correo"
+                type="email"
                 required
-                value={credenciales.usuario}
+                value={credenciales.correo}
                 onChange={handleChange}
-                placeholder="Ingresa tu usuario o correo" 
+                placeholder="nombre@ejemplo.cl"
                 className="w-full text-sm border border-sand-200 rounded-xl px-4 py-3 focus:outline-none focus:border-forest-800 transition-colors bg-sand-50/20"
               />
             </div>
@@ -119,17 +132,14 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="text-right">
-              <a href="#" className="text-xs font-medium text-forest-800 hover:underline">
-                ¿Olvidaste tu contraseña?
-              </a>
-            </div>
+            {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
 
             <button 
               type="submit" 
+              disabled={enviando}
               className="w-full bg-forest-800 text-white font-medium text-sm py-3.5 rounded-xl hover:bg-forest-900 transition-colors shadow-sm"
             >
-              Iniciar sesión
+              {enviando ? 'Ingresando…' : 'Iniciar sesión'}
             </button>
           </form>
 
