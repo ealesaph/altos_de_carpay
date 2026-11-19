@@ -23,22 +23,39 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.altosdecarpay.app.data.remote.NetworkResult
 import com.altosdecarpay.app.ui.theme.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.altosdecarpay.app.ui.viewmodel.AuthViewModel
 
 @Composable
 fun LoginScreen(
+    authViewModel: AuthViewModel? = viewModel(),
     onLoginSuccess: (rol: String) -> Unit = {},
     onNavigateToRegister: () -> Unit = {}
 ) {
     var identificador by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val coroutineScope = rememberCoroutineScope()
+    val loginState by authViewModel?.loginState?.collectAsState() ?: remember { mutableStateOf(null) }
+
+    LaunchedEffect(loginState) {
+        when (val state = loginState) {
+            is NetworkResult.Success -> {
+                val rol = state.data
+                authViewModel?.resetLoginState()
+                onLoginSuccess(rol)
+            }
+            is NetworkResult.Error -> {
+                errorMessage = state.message
+            }
+            else -> {}
+        }
+    }
+
+    val isLoading = loginState is NetworkResult.Loading
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -186,10 +203,10 @@ fun LoginScreen(
                             errorMessage = validationError
                             return@Button
                         }
-                        coroutineScope.launch {
-                            isLoading = true
-                            delay(1000)
-                            isLoading = false
+                        if (authViewModel != null) {
+                            authViewModel.login(identificador.trim(), password)
+                        } else {
+                            // Fallback modo offline
                             val rolSimulado = LoginHelper.determineRole(identificador)
                             onLoginSuccess(rolSimulado)
                         }
@@ -282,5 +299,5 @@ fun LoginScreen(
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun LoginScreenPreview() {
-    LoginScreen()
+    LoginScreen(authViewModel = null)
 }

@@ -21,12 +21,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.altosdecarpay.app.data.model.RegistroRequest
+import com.altosdecarpay.app.data.remote.NetworkResult
 import com.altosdecarpay.app.ui.theme.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.altosdecarpay.app.ui.viewmodel.AuthViewModel
 
 @Composable
 fun RegisterScreen(
+    authViewModel: AuthViewModel? = viewModel(),
     onRegisterSuccess: () -> Unit = {},
     onNavigateToLogin: () -> Unit = {}
 ) {
@@ -51,8 +54,23 @@ fun RegisterScreen(
     var anioNac by remember { mutableStateOf("") }
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
+
+    val registroState by authViewModel?.registroState?.collectAsState() ?: remember { mutableStateOf(null) }
+
+    LaunchedEffect(registroState) {
+        when (val state = registroState) {
+            is NetworkResult.Success -> {
+                authViewModel?.resetRegistroState()
+                onRegisterSuccess()
+            }
+            is NetworkResult.Error -> {
+                errorMessage = state.message
+            }
+            else -> {}
+        }
+    }
+
+    val isLoading = registroState is NetworkResult.Loading
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -367,10 +385,20 @@ fun RegisterScreen(
                             errorMessage = "Por favor completa al menos tu nombre, apellido y teléfono."
                             return@Button
                         }
-                        coroutineScope.launch {
-                            isLoading = true
-                            delay(1000) // Simula POST /api/auth/register/ hacia Django
-                            isLoading = false
+                        if (authViewModel != null) {
+                            authViewModel.registro(
+                                RegistroRequest(
+                                    correo = correo.trim(),
+                                    rut = rut.trim(),
+                                    nombre = nombre.trim(),
+                                    apellidoPaterno = apellidoPaterno.trim(),
+                                    apellidoMaterno = apellidoMaterno.trim().ifBlank { apellidoPaterno.trim() },
+                                    telefono = telefono.trim(),
+                                    password = password,
+                                    aceptaPoliticaDatos = true
+                                )
+                            )
+                        } else {
                             onRegisterSuccess()
                         }
                     },
@@ -463,5 +491,5 @@ private fun RegisterTextField(
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun RegisterScreenPreview() {
-    RegisterScreen()
+    RegisterScreen(authViewModel = null)
 }

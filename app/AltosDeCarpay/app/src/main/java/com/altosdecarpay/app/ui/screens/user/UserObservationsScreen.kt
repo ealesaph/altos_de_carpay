@@ -15,26 +15,54 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.altosdecarpay.app.data.remote.NetworkResult
 import com.altosdecarpay.app.ui.theme.*
+import com.altosdecarpay.app.ui.viewmodel.ConsultasViewModel
 
 @Composable
 fun UserObservationsScreen(
     reservaId: String = "RES-0261",
+    consultasViewModel: ConsultasViewModel? = viewModel(),
     onBackClick: () -> Unit = {},
     onTabSelected: (UserTab) -> Unit = {}
 ) {
     var asunto by remember { mutableStateOf("") }
     var mensaje by remember { mutableStateOf("") }
-    var observaciones by remember {
-        mutableStateOf(
-            listOf(
-                Triple(
-                    "OBS-0032 · Acceso para una persona mayor",
-                    "Hola, para el almuerzo del 7 de noviembre vendrá mi abuela. ¿Hay un acceso sin escalones a la terraza?",
-                    "Administrador · Altos de carpay: Sí, pueden ingresar por el acceso lateral sin escalones. Al llegar, avísennos y les indicaremos el camino a la terraza. ¡Los esperamos!"
-                )
+
+    val defaultObservaciones = remember {
+        listOf(
+            Triple(
+                "OBS-0032 · Acceso para una persona mayor",
+                "Hola, para el almuerzo del 7 de noviembre vendrá mi abuela. ¿Hay un acceso sin escalones a la terraza?",
+                "Administrador · Altos de carpay: Sí, pueden ingresar por el acceso lateral sin escalones. Al llegar, avísennos y les indicaremos el camino a la terraza. ¡Los esperamos!"
             )
         )
+    }
+
+    LaunchedEffect(Unit) {
+        consultasViewModel?.loadConsultas()
+    }
+
+    val consultasState by consultasViewModel?.consultas?.collectAsState() ?: remember { mutableStateOf(null) }
+
+    val observaciones = remember(consultasState) {
+        when (val state = consultasState) {
+            is NetworkResult.Success -> {
+                if (state.data.isNotEmpty()) {
+                    state.data.map { c ->
+                        Triple(
+                            "${c.idFormateado} · ${c.asunto}",
+                            c.mensaje,
+                            c.respuesta?.ifBlank { "Pendiente de respuesta del equipo" } ?: "Pendiente de respuesta del equipo"
+                        )
+                    }
+                } else {
+                    defaultObservaciones
+                }
+            }
+            else -> defaultObservaciones
+        }
     }
 
     Scaffold(
@@ -91,7 +119,9 @@ fun UserObservationsScreen(
                     Button(
                         onClick = {
                             if (asunto.isNotBlank() && mensaje.isNotBlank()) {
-                                observaciones = listOf(Triple("OBS-0033 · $asunto", mensaje, "Pendiente de respuesta del equipo")) + observaciones
+                                if (consultasViewModel != null) {
+                                    consultasViewModel.crearConsulta(asunto, mensaje)
+                                }
                                 asunto = ""
                                 mensaje = ""
                             }

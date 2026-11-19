@@ -15,10 +15,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.altosdecarpay.app.ui.theme.*
+import com.altosdecarpay.app.ui.viewmodel.AuthViewModel
 
 @Composable
 fun AdminProfileScreen(
+    authViewModel: AuthViewModel? = viewModel(),
     onNavigateToBitacora: () -> Unit = {},
     onNavigateToProducts: () -> Unit = {},
     onLogout: () -> Unit = {},
@@ -58,7 +61,13 @@ fun AdminProfileScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             OutlinedButton(
-                onClick = onLogout,
+                onClick = {
+                    if (authViewModel != null) {
+                        authViewModel.logout(onDone = onLogout)
+                    } else {
+                        onLogout()
+                    }
+                },
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, CarpayRedText.copy(alpha = 0.5f)),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = CarpayRedText),

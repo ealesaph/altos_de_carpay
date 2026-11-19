@@ -1,5 +1,6 @@
 package com.altosdecarpay.app.data.remote
 
+import android.content.Context
 import com.altosdecarpay.app.data.model.TokenRefreshResponse
 import com.google.gson.Gson
 import okhttp3.Authenticator
@@ -11,6 +12,7 @@ import okhttp3.Response
 import okhttp3.Route
 
 class TokenAuthenticator(
+    private val context: Context,
     private val tokenManager: TokenManager
 ) : Authenticator {
 
@@ -29,8 +31,9 @@ class TokenAuthenticator(
         val json = """{"refresh":"$refreshToken"}"""
         val body = json.toRequestBody("application/json".toMediaType())
 
+        val baseUrl = ApiClient.getBaseUrl(context)
         val refreshRequest = Request.Builder()
-            .url(ApiClient.BASE_URL + "auth/refresh/")
+            .url(baseUrl + "auth/refresh/")
             .post(body)
             .build()
 

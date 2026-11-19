@@ -84,16 +84,49 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private val _registroState = MutableStateFlow<NetworkResult<PerfilResponse>?>(null)
+    val registroState: StateFlow<NetworkResult<PerfilResponse>?> = _registroState
+
+    fun registro(request: com.altosdecarpay.app.data.model.RegistroRequest) {
+        viewModelScope.launch {
+            _registroState.value = NetworkResult.Loading
+            try {
+                val response = api.registro(request)
+                if (response.isSuccessful) {
+                    val body = response.body()!!
+                    _registroState.value = NetworkResult.Success(body)
+                } else {
+                    val errorBody = response.errorBody()?.string() ?: "Error en el registro"
+                    _registroState.value = NetworkResult.Error(parseError(errorBody), response.code())
+                }
+            } catch (e: Exception) {
+                _registroState.value = NetworkResult.Error(e.message ?: "Error de conexión al registrarse.")
+            }
+        }
+    }
+
+    fun resetRegistroState() {
+        _registroState.value = null
+    }
+
     fun resetLoginState() {
         _loginState.value = null
     }
 
     private fun parseError(json: String): String {
         return try {
-            val regex = """"[^"]*"\s*:\s*\[?"([^"\]]+)""".toRegex()
-            regex.find(json)?.groupValues?.get(1) ?: "Credenciales incorrectas."
+            val jsonObject = com.google.gson.JsonParser.parseString(json).asJsonObject
+            val firstEntry = jsonObject.entrySet().firstOrNull() ?: return "Error en la solicitud."
+            val element = firstEntry.value
+            if (element.isJsonArray && element.asJsonArray.size() > 0) {
+                element.asJsonArray[0].asString
+            } else if (element.isJsonPrimitive) {
+                element.asString
+            } else {
+                "Error en el campo ${firstEntry.key}"
+            }
         } catch (_: Exception) {
-            "Credenciales incorrectas."
+            "Credenciales incorrectas o error en el servidor."
         }
     }
 }

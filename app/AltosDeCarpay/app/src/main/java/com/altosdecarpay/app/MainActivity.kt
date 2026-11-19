@@ -7,11 +7,16 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.altosdecarpay.app.data.SessionState
+import com.altosdecarpay.app.data.remote.ApiClient
 import com.altosdecarpay.app.ui.screens.LoginScreen
 import com.altosdecarpay.app.ui.screens.RegisterScreen
 import com.altosdecarpay.app.ui.screens.admin.*
 import com.altosdecarpay.app.ui.screens.user.*
 import com.altosdecarpay.app.ui.theme.AltosDeCarpayTheme
+import com.altosdecarpay.app.ui.viewmodel.AuthViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,7 +63,19 @@ sealed class AppRoute {
 fun AppNavigationHost(
     onShowToast: (String) -> Unit
 ) {
-    var currentRoute by remember { mutableStateOf<AppRoute>(AppRoute.Login) }
+    val context = LocalContext.current
+    val tokenManager = remember { ApiClient.getTokenManager(context) }
+    val authViewModel: AuthViewModel = viewModel()
+
+    var currentRoute by remember {
+        mutableStateOf<AppRoute>(
+            if (tokenManager.isLoggedIn) {
+                if (tokenManager.userRole == "Admin") AppRoute.AdminDashboard else AppRoute.UserReservations
+            } else {
+                AppRoute.Login
+            }
+        )
+    }
 
     val handleAdminTabSelection: (AdminTab) -> Unit = { tab ->
         currentRoute = when (tab) {
@@ -108,12 +125,14 @@ fun AppNavigationHost(
     when (val route = currentRoute) {
         is AppRoute.Login -> {
             LoginScreen(
+                authViewModel = authViewModel,
                 onLoginSuccess = { rol ->
                     if (rol == "Admin") {
                         onShowToast("Acceso Administración")
                         currentRoute = AppRoute.AdminDashboard
                     } else {
-                        onShowToast("Bienvenida, Camila (Área de Usuario)")
+                        val nombre = SessionState.userName.ifBlank { "Área de Usuario" }
+                        onShowToast("Bienvenido/a ($nombre)")
                         currentRoute = AppRoute.UserReservations
                     }
                 },
@@ -125,9 +144,10 @@ fun AppNavigationHost(
 
         is AppRoute.Register -> {
             RegisterScreen(
+                authViewModel = authViewModel,
                 onRegisterSuccess = {
-                    onShowToast("¡Cuenta creada con éxito!")
-                    currentRoute = AppRoute.UserReservations
+                    onShowToast("¡Cuenta creada con éxito! Inicia sesión para continuar.")
+                    currentRoute = AppRoute.Login
                 },
                 onNavigateToLogin = {
                     currentRoute = AppRoute.Login
@@ -185,6 +205,7 @@ fun AppNavigationHost(
             onTabSelected = handleAdminTabSelection
         )
         is AppRoute.AdminProfile -> AdminProfileScreen(
+            authViewModel = authViewModel,
             onNavigateToBitacora = { currentRoute = AppRoute.AdminBitacora("RES-0248") },
             onNavigateToProducts = { currentRoute = AppRoute.AdminProducts },
             onLogout = { currentRoute = AppRoute.Login },
@@ -230,6 +251,7 @@ fun AppNavigationHost(
             onTabSelected = handleUserTabSelection
         )
         is AppRoute.UserProfile -> UserProfileScreen(
+            authViewModel = authViewModel,
             onLogout = { currentRoute = AppRoute.Login },
             onTabSelected = handleUserTabSelection
         )
