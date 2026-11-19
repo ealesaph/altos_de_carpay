@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getSectors } from '../api.js';
 import { 
   Sparkles, 
   MapPin, 
@@ -15,6 +16,29 @@ import {
 
 export default function Home() {
   const [faqAbierta, setFaqAbierta] = useState(null);
+  const [sectores, setSectores] = useState([]);
+  const [errorCatalogo, setErrorCatalogo] = useState('');
+  const [cargandoCatalogo, setCargandoCatalogo] = useState(true);
+
+  useEffect(() => {
+    let activo = true;
+    getSectors()
+      .then((catalogo) => {
+        if (activo) setSectores(catalogo);
+      })
+      .catch((requestError) => {
+        if (activo) setErrorCatalogo(requestError.message);
+      })
+      .finally(() => {
+        if (activo) setCargandoCatalogo(false);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  const sectoresDisponibles = sectores.filter((sector) => sector.estado === 'Disponible');
 
   const toggleFaq = (index) => {
     setFaqAbierta(faqAbierta === index ? null : index);
@@ -185,96 +209,64 @@ export default function Home() {
           </p>
         </div>
 
+        {cargandoCatalogo && <p role="status">Cargando espacios disponibles…</p>}
+        {errorCatalogo && <p role="alert" className="text-red-700">{errorCatalogo}</p>}
+        {!cargandoCatalogo && !errorCatalogo && !sectoresDisponibles.length && (
+          <p>No hay espacios disponibles en este momento.</p>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          
-          {/* Card 1: Terraza superior */}
-          <div className="bg-white rounded-3xl overflow-hidden border border-sand-200/80 shadow-sm hover:shadow-md transition-all flex flex-col">
-            <div className="h-64 w-full overflow-hidden bg-sand-100 relative">
-              <img 
-                src="https://images.unsplash.com/photo-1544984243-ec57ea16fe25?auto=format&fit=crop&w=800&q=80" 
-                alt="Terraza superior con parrilla" 
-                className="w-full h-full object-cover block hover:scale-105 transition-transform duration-700"
-              />
-              <span className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-forest-900 font-semibold text-xs px-3 py-1 rounded-full border border-gray-100">
-                Hasta 40 personas
-              </span>
-            </div>
-
-            <div className="p-7 flex-1 flex flex-col justify-between">
-              <div>
-                <h3 className="font-serif text-2xl font-semibold text-forest-900 mb-2">
-                  Terraza superior
-                </h3>
-                <p className="text-sm text-gray-600 leading-relaxed mb-6">
-                  Incluye parrilla amplia, mesones de madera rústica, vajilla, cocina de apoyo y vista panorámica a la precordillera.
-                </p>
-                <div className="flex flex-wrap gap-2 mb-6">
-                  <span className="text-[11px] bg-sand-100 text-gray-700 px-2.5 py-1 rounded-md">Bloque de 5 hrs</span>
-                  <span className="text-[11px] bg-sand-100 text-gray-700 px-2.5 py-1 rounded-md">Área techada</span>
-                  <span className="text-[11px] bg-sand-100 text-gray-700 px-2.5 py-1 rounded-md">Parrilla incluida</span>
-                </div>
+          {sectoresDisponibles.map((sector) => (
+            <article key={sector.id_sector} className="bg-white rounded-3xl overflow-hidden border border-sand-200/80 shadow-sm hover:shadow-md transition-all flex flex-col">
+              <div className="h-64 w-full overflow-hidden bg-sand-100">
+                {sector.fotografias?.[0] ? (
+                  <img
+                    src={sector.fotografias[0]}
+                    alt={sector.nombre}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-forest-100 to-sand-200 text-forest-700">
+                    <Compass size={56} aria-hidden="true" />
+                  </div>
+                )}
               </div>
 
-              <div className="pt-5 border-t border-gray-100 flex items-center justify-between">
+              <div className="p-7 flex-1 flex flex-col justify-between">
                 <div>
-                  <span className="text-[11px] uppercase tracking-wider text-gray-400 block font-semibold">Valor total bloque</span>
-                  <span className="text-xl font-bold text-forest-900">$300.000 CLP</span>
-                  <span className="text-[11px] text-forest-700 block mt-0.5">Anticipo 30%: $90.000</span>
+                  <h3 className="font-serif text-2xl font-semibold text-forest-900 mb-2">
+                    {sector.nombre}
+                  </h3>
+                  <p className="text-sm text-gray-600 leading-relaxed mb-6">
+                    {sector.descripcion || 'Consulta la disponibilidad y duración al iniciar tu reserva.'}
+                  </p>
+                  <span className="text-[11px] bg-sand-100 text-gray-700 px-2.5 py-1 rounded-md">
+                    Disponible
+                  </span>
                 </div>
-                <Link 
-                  to="/reservar/espacio" 
-                  className="bg-forest-100 text-forest-900 hover:bg-forest-800 hover:text-white px-4 py-2.5 rounded-full text-xs font-semibold transition-colors"
-                >
-                  Reservar espacio
-                </Link>
-              </div>
-            </div>
-          </div>
 
-          {/* Card 2: Mirador del Valle */}
-          <div className="bg-white rounded-3xl overflow-hidden border border-sand-200/80 shadow-sm hover:shadow-md transition-all flex flex-col">
-            <div className="h-64 w-full overflow-hidden bg-sand-100 relative">
-              <img 
-                src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80" 
-                alt="Mirador del Valle al aire libre" 
-                className="w-full h-full object-cover block hover:scale-105 transition-transform duration-700"
-              />
-              <span className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-forest-900 font-semibold text-xs px-3 py-1 rounded-full border border-gray-100">
-                Hasta 20 personas
-              </span>
-            </div>
-
-            <div className="p-7 flex-1 flex flex-col justify-between">
-              <div>
-                <h3 className="font-serif text-2xl font-semibold text-forest-900 mb-2">
-                  Mirador del Valle
-                </h3>
-                <p className="text-sm text-gray-600 leading-relaxed mb-6">
-                  Área lounge con fogón central, bancas de descanso y senderos naturales, perfecta para celebraciones íntimas y atardeceres.
-                </p>
-                <div className="flex flex-wrap gap-2 mb-6">
-                  <span className="text-[11px] bg-sand-100 text-gray-700 px-2.5 py-1 rounded-md">Bloque de 5 hrs</span>
-                  <span className="text-[11px] bg-sand-100 text-gray-700 px-2.5 py-1 rounded-md">Fogón exterior</span>
-                  <span className="text-[11px] bg-sand-100 text-gray-700 px-2.5 py-1 rounded-md">Iluminación cálida</span>
+                <div className="pt-5 mt-6 border-t border-gray-100 flex items-center justify-between gap-4">
+                  <div>
+                    <span className="text-[11px] uppercase tracking-wider text-gray-400 block font-semibold">
+                      Valor por hora
+                    </span>
+                    <span className="text-xl font-bold text-forest-900">
+                      ${Number(sector.valor_hora).toLocaleString('es-CL')} CLP
+                    </span>
+                    <span className="text-[11px] text-forest-700 block mt-0.5">
+                      Anticipo calculado al reservar
+                    </span>
+                  </div>
+                  <Link
+                    to="/reservar/espacio"
+                    className="bg-forest-100 text-forest-900 hover:bg-forest-800 hover:text-white px-4 py-2.5 rounded-full text-xs font-semibold transition-colors"
+                  >
+                    Reservar espacio
+                  </Link>
                 </div>
               </div>
-
-              <div className="pt-5 border-t border-gray-100 flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] uppercase tracking-wider text-gray-400 block font-semibold">Valor total bloque</span>
-                  <span className="text-xl font-bold text-forest-900">$180.000 CLP</span>
-                  <span className="text-[11px] text-forest-700 block mt-0.5">Anticipo 30%: $54.000</span>
-                </div>
-                <Link 
-                  to="/reservar/espacio" 
-                  className="bg-forest-100 text-forest-900 hover:bg-forest-800 hover:text-white px-4 py-2.5 rounded-full text-xs font-semibold transition-colors"
-                >
-                  Reservar espacio
-                </Link>
-              </div>
-            </div>
-          </div>
-
+            </article>
+          ))}
         </div>
       </section>
 
@@ -341,7 +333,7 @@ export default function Home() {
             <span className="text-3xl font-serif text-forest-800 font-bold block">01</span>
             <h3 className="text-lg font-semibold text-forest-900">Elige tu espacio y fecha</h3>
             <p className="text-xs text-gray-600 leading-relaxed">
-              Selecciona entre la Terraza Superior o el Mirador según la cantidad de invitados y el tipo de reunión familiar o corporativa.
+              Elige un espacio disponible en el catálogo y selecciona la fecha y el horario de tu reunión.
             </p>
           </div>
 
@@ -475,9 +467,14 @@ export default function Home() {
                     name="espacio"
                     className="w-full text-sm border border-sand-200 rounded-xl p-3 bg-white focus:outline-none focus:border-forest-800 text-gray-700"
                   >
-                    <option value="terraza">Terraza superior (hasta 40 pers.)</option>
-                    <option value="mirador">Mirador del Valle (hasta 20 pers.)</option>
-                    <option value="completo">Recinto completo exclusivo</option>
+                    <option value="">
+                      {cargandoCatalogo ? 'Cargando espacios…' : 'Selecciona un espacio'}
+                    </option>
+                    {sectoresDisponibles.map((sector) => (
+                      <option key={sector.id_sector} value={sector.id_sector}>
+                        {sector.nombre}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>

@@ -86,9 +86,7 @@ class ReservaCrearSerializer(serializers.Serializer):
     def validate(self, datos):
         solicitante = self.context["request"].user
         if solicitante.es_admin:
-            if "cliente" not in datos:
-                raise serializers.ValidationError({"cliente": "Indique el cliente al que pertenece la reserva."})
-            datos["titular"] = datos.pop("cliente")
+            datos["titular"] = datos.pop("cliente", solicitante)
         else:
             if "cliente" in datos:
                 raise serializers.ValidationError({"cliente": "No puede reservar a nombre de otro usuario."})
