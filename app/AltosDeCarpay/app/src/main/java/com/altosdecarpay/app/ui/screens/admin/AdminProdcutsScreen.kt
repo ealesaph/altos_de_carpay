@@ -14,32 +14,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.altosdecarpay.app.data.remote.NetworkResult
 import com.altosdecarpay.app.ui.theme.*
-
-data class ProductoExternoUi(
-    val nombre: String,
-    val detalle: String,
-    val publicado: Boolean,
-    val disponible: Boolean
-)
+import com.altosdecarpay.app.ui.viewmodel.ServiciosViewModel
 
 @Composable
 fun AdminProductsScreen(
+    serviciosViewModel: ServiciosViewModel = viewModel(),
     onBackClick: () -> Unit = {},
     onTabSelected: (AdminTab) -> Unit = {}
 ) {
-    var productos by remember {
-        mutableStateOf(
-            listOf(
-                ProductoExternoUi("Bebida 1,5 L", "Gaseosa para compartir · $2.500", true, true),
-                ProductoExternoUi("Bolsa de hielo 2 kg", "Hielo en cubos · $2.000", true, true),
-                ProductoExternoUi("Agua mineral 1,5 L", "Sin gas · $1.500", true, false),
-                ProductoExternoUi("Carbón 3 kg", "Bolsa para parrilla · $4.500", false, true)
-            )
-        )
-    }
+    val serviciosState by serviciosViewModel.servicios.collectAsState()
+
     var nombreNuevo by remember { mutableStateOf("") }
+    var descripcionNuevo by remember { mutableStateOf("") }
     var precioNuevo by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        serviciosViewModel.loadServicios()
+    }
+
+    val servicios = (serviciosState as? NetworkResult.Success)?.data ?: emptyList()
 
     Scaffold(
         topBar = { AdminTopBar() },
@@ -55,49 +51,52 @@ fun AdminProductsScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             AdminScreenHeader(
-                title = "Productos externos",
-                subtitle = "Perfil · Menú de productos para las reservas",
+                title = "Servicios y productos",
+                subtitle = "Catálogo de servicios extra registrados en la base de datos",
                 showBackButton = true,
                 onBackClick = onBackClick
             )
 
-            Text("En el menú de usuario", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
+            Text("Catálogo actual (${servicios.size})", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
 
-            productos.forEach { prod ->
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = CarpayWhite,
-                    border = BorderStroke(1.dp, CarpayInputBorder),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text(prod.nombre, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
-                        Text(prod.detalle, fontSize = 12.sp, color = CarpayTextSecondary)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (serviciosState is NetworkResult.Loading) {
+                Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = CarpayPrimaryGreen)
+                }
+            } else {
+                servicios.forEach { prod ->
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = CarpayWhite,
+                        border = BorderStroke(1.dp, CarpayInputBorder),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text(prod.nombre, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
+                            Text(
+                                "${prod.descripcion.ifBlank { "Servicio extra" }} · $${prod.valor}",
+                                fontSize = 12.sp,
+                                color = CarpayTextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (prod.publicado) CarpayGreenLight else CarpayInputBorder
+                                color = if (prod.estado == "Activo") CarpayGreenLight else CarpayInputBorder
                             ) {
                                 Text(
-                                    if (prod.publicado) "Visible en menú" else "No publicado",
+                                    prod.estado,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (prod.publicado) CarpayPrimaryGreen else CarpayTextSecondary,
+                                    color = if (prod.estado == "Activo") CarpayPrimaryGreen else CarpayTextSecondary,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                 )
                             }
-                            Text(
-                                if (prod.disponible) "Disponible" else "No disponible",
-                                fontSize = 11.sp,
-                                color = if (prod.disponible) CarpayTextSecondary else CarpayRedText
-                            )
                         }
                     }
                 }
             }
 
-            // Agregar producto rápido
+            // Agregar producto real en la BD
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = CarpayWhite,
@@ -105,7 +104,7 @@ fun AdminProductsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Nuevo producto", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = CarpayTextPrimary)
+                    Text("Nuevo servicio / producto", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = CarpayTextPrimary)
                     OutlinedTextField(
                         value = nombreNuevo,
                         onValueChange = { nombreNuevo = it },
@@ -114,27 +113,37 @@ fun AdminProductsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
+                        value = descripcionNuevo,
+                        onValueChange = { descripcionNuevo = it },
+                        placeholder = { Text("Descripción breve (opcional)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
                         value = precioNuevo,
                         onValueChange = { precioNuevo = it },
-                        placeholder = { Text("Precio CLP (ej: $3.000)") },
+                        placeholder = { Text("Precio CLP (ej: 3000)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Button(
                         onClick = {
-                            if (nombreNuevo.isNotBlank()) {
-                                productos = productos + ProductoExternoUi(nombreNuevo, "Servicio extra · ${precioNuevo.ifBlank { "$3.000" }}", true, true)
-                                nombreNuevo = ""
-                                precioNuevo = ""
+                            if (nombreNuevo.isNotBlank() && precioNuevo.isNotBlank()) {
+                                serviciosViewModel.crearServicio(nombreNuevo, descripcionNuevo, precioNuevo) {
+                                    nombreNuevo = ""
+                                    descripcionNuevo = ""
+                                    precioNuevo = ""
+                                }
                             }
                         },
+                        enabled = nombreNuevo.isNotBlank() && precioNuevo.isNotBlank(),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = CarpayPrimaryGreen, contentColor = CarpayWhite),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
                         Icon(Icons.Outlined.Check, null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Guardar producto", fontWeight = FontWeight.SemiBold)
+                        Text("Guardar en base de datos", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

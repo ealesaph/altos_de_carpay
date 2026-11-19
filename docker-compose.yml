@@ -28,7 +28,7 @@ services:
     container_name: carpay_backend
     restart: unless-stopped
     env_file:
-      - .env
+      - ./backend/altosDeCarpay/.env
     environment:
       DB_HOST: db
       DB_PORT: 5432

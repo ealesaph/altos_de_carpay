@@ -32,15 +32,38 @@ interface ApiService {
     // ── Sectores ──
 
     @GET("sectores/")
-    suspend fun getSectores(): Response<List<SectorResponse>>
+    suspend fun getSectores(): Response<PaginatedResponse<SectorResponse>>
 
     @GET("sectores/{id}/")
     suspend fun getSector(@Path("id") id: Int): Response<SectorResponse>
 
+    @PATCH("sectores/{id}/")
+    suspend fun actualizarSector(
+        @Path("id") id: Int,
+        @Body body: Map<String, String>
+    ): Response<SectorResponse>
+
     // ── Servicios ──
 
     @GET("servicios/")
-    suspend fun getServicios(): Response<List<ServicioResponse>>
+    suspend fun getServicios(): Response<PaginatedResponse<ServicioResponse>>
+
+    @POST("servicios/")
+    suspend fun crearServicio(@Body request: ServicioCrearRequest): Response<ServicioResponse>
+
+    @PATCH("servicios/{id}/")
+    suspend fun actualizarServicio(
+        @Path("id") id: Int,
+        @Body body: Map<String, String>
+    ): Response<ServicioResponse>
+
+    // ── Auditoría ──
+
+    @GET("auditoria/logs/")
+    suspend fun getAuditoriaLogs(
+        @Query("tabla") tabla: String? = null,
+        @Query("id_registro") idRegistro: Int? = null
+    ): Response<PaginatedResponse<LogModificacionResponse>>
 
     // ── Reservas ──
 

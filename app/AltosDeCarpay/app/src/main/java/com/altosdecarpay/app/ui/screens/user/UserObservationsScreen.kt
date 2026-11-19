@@ -30,16 +30,6 @@ fun UserObservationsScreen(
     var asunto by remember { mutableStateOf("") }
     var mensaje by remember { mutableStateOf("") }
 
-    val defaultObservaciones = remember {
-        listOf(
-            Triple(
-                "OBS-0032 · Acceso para una persona mayor",
-                "Hola, para el almuerzo del 7 de noviembre vendrá mi abuela. ¿Hay un acceso sin escalones a la terraza?",
-                "Administrador · Altos de carpay: Sí, pueden ingresar por el acceso lateral sin escalones. Al llegar, avísennos y les indicaremos el camino a la terraza. ¡Los esperamos!"
-            )
-        )
-    }
-
     LaunchedEffect(Unit) {
         consultasViewModel?.loadConsultas()
     }
@@ -48,20 +38,14 @@ fun UserObservationsScreen(
 
     val observaciones = remember(consultasState) {
         when (val state = consultasState) {
-            is NetworkResult.Success -> {
-                if (state.data.isNotEmpty()) {
-                    state.data.map { c ->
-                        Triple(
-                            "${c.idFormateado} · ${c.asunto}",
-                            c.mensaje,
-                            c.respuesta?.ifBlank { "Pendiente de respuesta del equipo" } ?: "Pendiente de respuesta del equipo"
-                        )
-                    }
-                } else {
-                    defaultObservaciones
-                }
+            is NetworkResult.Success -> state.data.map { c ->
+                Triple(
+                    "${c.idFormateado} · ${c.asunto}",
+                    c.mensaje,
+                    c.respuesta?.ifBlank { "Pendiente de respuesta del equipo" } ?: "Pendiente de respuesta del equipo"
+                )
             }
-            else -> defaultObservaciones
+            else -> emptyList()
         }
     }
 
@@ -88,8 +72,7 @@ fun UserObservationsScreen(
             Surface(shape = RoundedCornerShape(14.dp), color = CarpayGreenLight, modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text("TU RESERVA · $reservaId", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CarpayPrimaryGreen)
-                    Text("Un almuerzo en familia", fontFamily = FontFamily.Serif, fontSize = 20.sp, color = CarpayTextPrimary)
-                    Text("7 nov. 2026 · 13:00–18:00 · Terraza superior · Próxima", fontSize = 12.sp, color = CarpayTextSecondary)
+                    Text("Canal directo con administración", fontFamily = FontFamily.Serif, fontSize = 18.sp, color = CarpayTextPrimary)
                 }
             }
 

@@ -16,17 +16,38 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.altosdecarpay.app.data.remote.NetworkResult
 import com.altosdecarpay.app.ui.theme.*
+import com.altosdecarpay.app.ui.viewmodel.ConsultasViewModel
 
 @Composable
 fun AdminTicketsScreen(
+    consultasViewModel: ConsultasViewModel = viewModel(),
     onTabSelected: (AdminTab) -> Unit = {}
 ) {
     var filterSelected by remember { mutableStateOf("Todos") }
-    var respuestaBorrador by remember {
-        mutableStateOf("Claro, el cálculo es \$500/min × 25 min = \$12.500, con tarifa de ejemplo. Es un cargo propuesto y no se ha cobrado.")
+    var selectedConsultaId by remember { mutableStateOf<Int?>(null) }
+    var respuestaBorrador by remember { mutableStateOf("") }
+
+    val consultasState by consultasViewModel.consultas.collectAsState()
+
+    LaunchedEffect(Unit) {
+        consultasViewModel.loadConsultas()
     }
-    var ticketResuelto by remember { mutableStateOf(false) }
+
+    val allConsultas = (consultasState as? NetworkResult.Success)?.data ?: emptyList()
+    val filteredConsultas = remember(allConsultas, filterSelected) {
+        if (filterSelected == "Pendiente") {
+            allConsultas.filter { it.estado == "Pendiente" }
+        } else {
+            allConsultas
+        }
+    }
+
+    val activeConsulta = remember(filteredConsultas, selectedConsultaId) {
+        filteredConsultas.firstOrNull { it.idConsulta == selectedConsultaId } ?: filteredConsultas.firstOrNull()
+    }
 
     Scaffold(
         topBar = { AdminTopBar() },
@@ -43,20 +64,22 @@ fun AdminTicketsScreen(
         ) {
             AdminScreenHeader(
                 title = "Consultas y reclamos",
-                subtitle = "Cada conversación, en el contexto de su reserva."
+                subtitle = "Bandeja de mensajes enviados por los clientes."
             )
 
             // Filtros
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Todos · 4", "Abiertos · 3").forEach { item ->
-                    val active = item.startsWith(filterSelected)
+                val countTodos = allConsultas.size
+                val countPend = allConsultas.count { it.estado == "Pendiente" }
+                listOf("Todos · $countTodos" to "Todos", "Pendientes · $countPend" to "Pendiente").forEach { (label, key) ->
+                    val active = filterSelected == key
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = if (active) CarpayPrimaryGreen else CarpayGreenLight.copy(alpha = 0.6f),
-                        modifier = Modifier.clickable { filterSelected = item.substringBefore(" ") }
+                        modifier = Modifier.clickable { filterSelected = key }
                     ) {
                         Text(
-                            text = item,
+                            text = label,
                             color = if (active) CarpayWhite else CarpayTextPrimary,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -66,122 +89,135 @@ fun AdminTicketsScreen(
                 }
             }
 
-            // Tarjeta Reserva Seleccionada
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = CarpayWhite,
-                border = BorderStroke(1.5.dp, CarpayPrimaryGreen),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("RES-0248 · Camila Rojas", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CarpayPrimaryGreen)
-                    Text("Cumpleaños de Camila", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = CarpayTextPrimary)
-                    Text("24 oct. · Reserva finalizada", fontSize = 12.sp, color = CarpayTextSecondary)
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Surface(shape = RoundedCornerShape(12.dp), color = CarpayGreenLight, modifier = Modifier.fillMaxWidth()) {
+            if (consultasState is NetworkResult.Loading) {
+                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = CarpayPrimaryGreen)
+                }
+            } else if (filteredConsultas.isEmpty()) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = CarpayWhite,
+                    border = BorderStroke(1.dp, CarpayInputBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(Icons.Outlined.Forum, null, tint = CarpayTextSecondary, modifier = Modifier.size(36.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("No hay consultas registradas.", fontSize = 14.sp, color = CarpayTextSecondary)
+                    }
+                }
+            } else {
+                // Selector de tickets
+                filteredConsultas.forEach { item ->
+                    val isSelected = item.idConsulta == activeConsulta?.idConsulta
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = CarpayWhite,
+                        border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, if (isSelected) CarpayPrimaryGreen else CarpayInputBorder),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedConsultaId = item.idConsulta }
+                    ) {
                         Row(
-                            modifier = Modifier.padding(12.dp),
+                            modifier = Modifier.padding(14.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("T-018 · Revisión del cargo extra", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = CarpayTextPrimary)
-                                Text("Reclamo · último mensaje 21:37", fontSize = 11.sp, color = CarpayTextSecondary)
+                                Text(
+                                    text = "${item.idFormateado} · ${item.clienteNombre ?: "Cliente"}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CarpayPrimaryGreen
+                                )
+                                Text(item.asunto, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
+                                Text(item.fechaEnvio.take(10), fontSize = 11.sp, color = CarpayTextSecondary)
                             }
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (ticketResuelto) CarpayWhite else CarpayAmberBg
+                                color = if (item.estado == "Respondida") CarpayGreenLight else CarpayAmberBg
                             ) {
                                 Text(
-                                    text = if (ticketResuelto) "Resuelta" else "Abierto",
+                                    text = item.estado,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (ticketResuelto) CarpayPrimaryGreen else CarpayAmberText,
+                                    color = if (item.estado == "Respondida") CarpayPrimaryGreen else CarpayAmberText,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            HorizontalDivider(color = CarpayInputBorder)
+                if (activeConsulta != null) {
+                    HorizontalDivider(color = CarpayInputBorder)
 
-            // Hilo de conversación
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("T-018 · RES-0248", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = CarpayTextPrimary)
-                Text("24 oct. 2026", fontSize = 12.sp, color = CarpayTextSecondary)
-            }
-
-            // Mensaje Cliente 1
-            ChatBubble(
-                author = "Camila Rojas",
-                message = "Hola, ¿me pueden explicar el cargo extra de mi reserva?",
-                time = "21:32",
-                isAdmin = false
-            )
-
-            // Mensaje Admin
-            ChatBubble(
-                author = "Equipo Altos de carpay",
-                message = "La salida quedó registrada a las 21:25: son 25 min adicionales. El cargo propuesto es de $12.500 y aún no se ha cobrado.",
-                time = "21:35 · Enviado",
-                isAdmin = true
-            )
-
-            // Mensaje Cliente 2
-            ChatBubble(
-                author = "Camila Rojas",
-                message = "Gracias. ¿Me comparten el detalle del cálculo?",
-                time = "21:37",
-                isAdmin = false
-            )
-
-            // Caja de respuesta
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = CarpayWhite,
-                border = BorderStroke(1.dp, CarpayInputBorder),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Text("TU RESPUESTA · BORRADOR", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = CarpayTextSecondary)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    OutlinedTextField(
-                        value = respuestaBorrador,
-                        onValueChange = { respuestaBorrador = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = CarpayPrimaryGreen,
-                            unfocusedBorderColor = CarpayInputBorder
-                        )
+                    Text(
+                        text = "Conversación · ${activeConsulta.idFormateado}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = CarpayTextPrimary
                     )
+
+                    ChatBubble(
+                        author = activeConsulta.clienteNombre ?: "Cliente",
+                        message = activeConsulta.mensaje,
+                        time = activeConsulta.fechaEnvio.take(16).replace("T", " "),
+                        isAdmin = false
+                    )
+
+                    if (!activeConsulta.respuesta.isNullOrBlank()) {
+                        ChatBubble(
+                            author = "Equipo Altos de carpay",
+                            message = activeConsulta.respuesta,
+                            time = activeConsulta.fechaRespuesta?.take(16)?.replace("T", " ") ?: "Respondida",
+                            isAdmin = true
+                        )
+                    } else {
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = CarpayWhite,
+                            border = BorderStroke(1.dp, CarpayInputBorder),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Text("TU RESPUESTA", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = CarpayTextSecondary)
+                                Spacer(modifier = Modifier.height(6.dp))
+                                OutlinedTextField(
+                                    value = respuestaBorrador,
+                                    onValueChange = { respuestaBorrador = it },
+                                    placeholder = { Text("Escribe la respuesta para el cliente...") },
+                                    minLines = 3,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = CarpayPrimaryGreen,
+                                        unfocusedBorderColor = CarpayInputBorder
+                                    )
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                if (respuestaBorrador.isNotBlank()) {
+                                    consultasViewModel.responderConsulta(activeConsulta.idConsulta, respuestaBorrador)
+                                    respuestaBorrador = ""
+                                }
+                            },
+                            enabled = respuestaBorrador.isNotBlank(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = CarpayPrimaryGreen, contentColor = CarpayWhite),
+                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                        ) {
+                            Icon(Icons.AutoMirrored.Outlined.Send, null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Enviar respuesta", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
-            }
-
-            Button(
-                onClick = { respuestaBorrador = "" },
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = CarpayPrimaryGreen, contentColor = CarpayWhite),
-                modifier = Modifier.fillMaxWidth().height(48.dp)
-            ) {
-                Icon(Icons.AutoMirrored.Outlined.Send, null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Enviar respuesta", fontWeight = FontWeight.SemiBold)
-            }
-
-            OutlinedButton(
-                onClick = { ticketResuelto = !ticketResuelto },
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, CarpayInputBorder),
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = CarpayWhite, contentColor = CarpayPrimaryGreen),
-                modifier = Modifier.fillMaxWidth().height(48.dp)
-            ) {
-                Icon(Icons.Outlined.CheckCircleOutline, null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (ticketResuelto) "Reabrir ticket" else "Marcar ticket como resuelto", fontWeight = FontWeight.SemiBold)
             }
         }
     }

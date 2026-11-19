@@ -20,7 +20,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.altosdecarpay.app.data.remote.NetworkResult
 import com.altosdecarpay.app.ui.theme.*
+import com.altosdecarpay.app.ui.viewmodel.ConsultasViewModel
+import com.altosdecarpay.app.ui.viewmodel.ReservasViewModel
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 data class ReservaItemUi(
     val id: String,
@@ -28,13 +35,15 @@ data class ReservaItemUi(
     val titulo: String,
     val cliente: String,
     val espacio: String,
-    val estado: String, // "En curso", "Confirmada", "Finalizada"
+    val estado: String,
     val detalleHorario: String,
     val alertaTiempo: String? = null
 )
 
 @Composable
 fun AdminDashboardScreen(
+    reservasViewModel: ReservasViewModel = viewModel(),
+    consultasViewModel: ConsultasViewModel = viewModel(),
     onNavigateToScanner: () -> Unit = {},
     onSelectReserva: (String) -> Unit = {},
     onTabSelected: (AdminTab) -> Unit = {}
@@ -42,41 +51,51 @@ fun AdminDashboardScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("Todas") }
 
-    val reservasMock = remember {
-        listOf(
-            ReservaItemUi(
-                id = "RES-0248",
-                hora = "16:00",
-                titulo = "Cumpleaños de Camila",
-                cliente = "Camila Rojas",
-                espacio = "Quincho Los Aromos",
-                estado = "En curso",
-                detalleHorario = "Ingreso 16:08 · cierre agendado 21:00",
-                alertaTiempo = "Cierre superado · salida aún por registrar"
-            ),
-            ReservaItemUi(
-                id = "RES-0249",
-                hora = "18:00",
-                titulo = "Encuentro de equipo",
-                cliente = "Diego Muñoz",
-                espacio = "Salón del Roble",
-                estado = "En curso",
-                detalleHorario = "Ingreso 18:02 · cierre agendado 23:00"
-            ),
-            ReservaItemUi(
-                id = "RES-0250",
-                hora = "22:00",
-                titulo = "Cena de aniversario",
-                cliente = "Valentina Soto",
-                espacio = "Jardín del Maitén",
-                estado = "Confirmada",
-                detalleHorario = "Sin ingreso · cierre 02:00 del 25 oct."
-            )
-        )
+    val reservasState by reservasViewModel.reservas.collectAsState()
+    val consultasState by consultasViewModel.consultas.collectAsState()
+
+    LaunchedEffect(Unit) {
+        reservasViewModel.loadReservas()
+        consultasViewModel.loadConsultas(estado = "Pendiente")
     }
 
-    val filteredReservas = remember(selectedFilter, searchQuery) {
-        ReservaFilterHelper.filterReservas(reservasMock, selectedFilter, searchQuery)
+    val fechaActual = remember {
+        val now = LocalDateTime.now()
+        val formatter = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' yyyy · HH:mm", Locale("es", "CL"))
+        now.format(formatter).replaceFirstChar { it.uppercase() }
+    }
+
+    val reservasReales = remember(reservasState) {
+        when (val state = reservasState) {
+            is NetworkResult.Success -> state.data.map { r ->
+                ReservaItemUi(
+                    id = r.idFormateado,
+                    hora = r.horaInicio.take(5),
+                    titulo = "Reserva ${r.sectorPrincipal}",
+                    cliente = r.cliente,
+                    espacio = r.sectorPrincipal,
+                    estado = when (r.estado) {
+                        "En Proceso" -> "En curso"
+                        "Confirmado" -> "Confirmadas"
+                        "Cancelado" -> "Canceladas"
+                        else -> r.estado
+                    },
+                    detalleHorario = "${r.fecha} · ${r.horaInicio.take(5)} – ${r.horaFin?.take(5) ?: "${r.horasReservadas}h"} · Total $${r.montoTotal}"
+                )
+            }
+            else -> emptyList()
+        }
+    }
+
+    val filteredReservas = remember(reservasReales, selectedFilter, searchQuery) {
+        ReservaFilterHelper.filterReservas(reservasReales, selectedFilter, searchQuery)
+    }
+
+    val totalReservas = reservasReales.size.toString()
+    val totalEnCurso = reservasReales.count { it.estado == "En curso" }.toString()
+    val totalTicketsPendientes = when (val cState = consultasState) {
+        is NetworkResult.Success -> cState.data.size.toString()
+        else -> "0"
     }
 
     Scaffold(
@@ -97,27 +116,24 @@ fun AdminDashboardScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
             contentPadding = PaddingValues(top = 20.dp, bottom = 24.dp)
         ) {
-            // Título y fecha
             item {
                 AdminScreenHeader(
-                    title = "La agenda de hoy",
-                    subtitle = "Sábado 24 de octubre de 2026 · 21:25"
+                    title = "La agenda",
+                    subtitle = fechaActual
                 )
             }
 
-            // Tarjetas KPI (6 Reservas hoy | 2 En curso | 3 Tickets abiertos)
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    KpiCard(number = "6", label = "Reservas hoy", modifier = Modifier.weight(1f))
-                    KpiCard(number = "2", label = "En curso", modifier = Modifier.weight(1f))
-                    KpiCard(number = "3", label = "Tickets abiertos", modifier = Modifier.weight(1f))
+                    KpiCard(number = totalReservas, label = "Reservas", modifier = Modifier.weight(1f))
+                    KpiCard(number = totalEnCurso, label = "En curso", modifier = Modifier.weight(1f))
+                    KpiCard(number = totalTicketsPendientes, label = "Tickets abiertos", modifier = Modifier.weight(1f))
                 }
             }
 
-            // Botón principal: Escanear QR
             item {
                 Button(
                     onClick = onNavigateToScanner,
@@ -144,14 +160,13 @@ fun AdminDashboardScreen(
                 }
             }
 
-            // Buscador
             item {
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     placeholder = {
                         Text(
-                            "Buscar por cliente, evento o reserva",
+                            "Buscar por cliente, espacio o reserva",
                             fontSize = 14.sp,
                             color = CarpayTextSecondary
                         )
@@ -175,9 +190,8 @@ fun AdminDashboardScreen(
                 )
             }
 
-            // Filtros (Chips)
             item {
-                val filters = listOf("Todas", "En curso", "Confirmadas", "Finalizadas")
+                val filters = listOf("Todas", "En curso", "Confirmadas", "Pendiente", "Canceladas")
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -203,7 +217,6 @@ fun AdminDashboardScreen(
                 }
             }
 
-            // Encabezado lista
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -211,26 +224,57 @@ fun AdminDashboardScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Reservas de hoy",
+                        text = "Reservas (${filteredReservas.size})",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = CarpayTextPrimary
                     )
-                    Text(
-                        text = "Ver las 6",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = CarpayPrimaryGreen
-                    )
+                    TextButton(onClick = { reservasViewModel.loadReservas() }) {
+                        Text(
+                            text = "Actualizar",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = CarpayPrimaryGreen
+                        )
+                    }
                 }
             }
 
-            // Tarjetas de Reserva
-            items(filteredReservas) { reserva ->
-                ReservaCard(
-                    reserva = reserva,
-                    onClick = { onSelectReserva(reserva.id) }
-                )
+            if (reservasState is NetworkResult.Loading) {
+                item {
+                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = CarpayPrimaryGreen)
+                    }
+                }
+            } else if (filteredReservas.isEmpty()) {
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = CarpayWhite,
+                        border = BorderStroke(1.dp, CarpayInputBorder),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(Icons.Outlined.EventBusy, null, tint = CarpayTextSecondary, modifier = Modifier.size(36.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "No hay reservas registradas con este filtro.",
+                                fontSize = 14.sp,
+                                color = CarpayTextSecondary
+                            )
+                        }
+                    }
+                }
+            } else {
+                items(filteredReservas) { reserva ->
+                    ReservaCard(
+                        reserva = reserva,
+                        onClick = { onSelectReserva(reserva.id) }
+                    )
+                }
             }
         }
     }
@@ -344,32 +388,6 @@ private fun ReservaCard(reserva: ReservaItemUi, onClick: () -> Unit) {
                 fontSize = 12.sp,
                 color = if (reserva.alertaTiempo != null) CarpayAmberText else CarpayTextSecondary
             )
-
-            if (reserva.alertaTiempo != null) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(CarpayAmberBg)
-                        .padding(horizontal = 10.dp, vertical = 8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Schedule,
-                        contentDescription = null,
-                        tint = CarpayAmberText,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = reserva.alertaTiempo,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = CarpayAmberText
-                    )
-                }
-            }
         }
     }
 }

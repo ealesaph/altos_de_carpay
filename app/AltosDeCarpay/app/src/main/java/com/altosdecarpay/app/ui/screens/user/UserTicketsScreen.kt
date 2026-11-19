@@ -15,16 +15,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.altosdecarpay.app.data.SessionState
+import com.altosdecarpay.app.data.remote.NetworkResult
 import com.altosdecarpay.app.ui.theme.*
+import com.altosdecarpay.app.ui.viewmodel.ConsultasViewModel
 
 @Composable
 fun UserTicketsScreen(
+    consultasViewModel: ConsultasViewModel = viewModel(),
     onBackClick: () -> Unit = {},
     onNavigateToObservations: () -> Unit = {},
     onTabSelected: (UserTab) -> Unit = {}
 ) {
     var nuevoMensaje by remember { mutableStateOf("") }
-    var mensajesExtra by remember { mutableStateOf(listOf<String>()) }
+    var nuevoAsunto by remember { mutableStateOf("Consulta general") }
+    val consultasState by consultasViewModel.consultas.collectAsState()
+
+    LaunchedEffect(Unit) {
+        consultasViewModel.loadConsultas()
+    }
+
+    val consultas = (consultasState as? NetworkResult.Success)?.data ?: emptyList()
+    val nombreUsuario = SessionState.userName.ifBlank { "Tú" }
 
     Scaffold(
         topBar = { UserTopBar() },
@@ -41,68 +54,99 @@ fun UserTicketsScreen(
         ) {
             UserScreenHeader(
                 title = "Estamos para ayudarte",
-                subtitle = "Consultas y reclamos vinculados a tu reserva",
+                subtitle = "Tus consultas y respuestas del equipo de Altos de Carpay",
                 showBackButton = true,
                 onBackClick = onBackClick
             )
 
-            // Contexto reserva
-            Surface(shape = RoundedCornerShape(14.dp), color = CarpayGreenLight, modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Text("RES-0248 · FINALIZADA", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CarpayPrimaryGreen)
-                    Text("Cumpleaños de Camila", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = CarpayTextPrimary)
-                    Text("24 oct. 2026 · Quincho Los Aromos", fontSize = 12.sp, color = CarpayTextSecondary)
+            if (consultasState is NetworkResult.Loading) {
+                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = CarpayPrimaryGreen)
+                }
+            } else if (consultas.isEmpty()) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = CarpayWhite,
+                    border = BorderStroke(1.dp, CarpayInputBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Aún no has enviado consultas. Escribe abajo para comunicarte con el equipo.",
+                        fontSize = 13.sp,
+                        color = CarpayTextSecondary,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            } else {
+                consultas.forEach { consulta ->
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("${consulta.idFormateado} · ${consulta.asunto}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = CarpayTextPrimary)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (consulta.estado == "Respondida") CarpayGreenLight else CarpayAmberBg
+                        ) {
+                            Text(
+                                consulta.estado,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (consulta.estado == "Respondida") CarpayPrimaryGreen else CarpayAmberText,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    UserChatBubble(
+                        author = nombreUsuario,
+                        message = consulta.mensaje,
+                        time = consulta.fechaEnvio.take(16).replace("T", " "),
+                        isUser = true
+                    )
+
+                    if (!consulta.respuesta.isNullOrBlank()) {
+                        UserChatBubble(
+                            author = "Equipo Altos de carpay",
+                            message = consulta.respuesta,
+                            time = consulta.fechaRespuesta?.take(16)?.replace("T", " ") ?: "Respondido",
+                            isUser = false
+                        )
+                    }
+                    HorizontalDivider(color = CarpayInputBorder)
                 }
             }
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("T-018 · Reclamo", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = CarpayTextPrimary)
-                Surface(shape = RoundedCornerShape(8.dp), color = CarpayAmberBg) {
-                    Text("Abierto", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CarpayAmberText, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
-                }
-            }
-            Text("Revisión del cargo extra", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = CarpayTextPrimary)
-
-            // Burbujas del chat (vista cliente: Camila a la derecha, Equipo a la izquierda)
-            UserChatBubble("Tú · Camila", "Hola, ¿me pueden explicar el cargo extra de mi reserva?", "21:32", isUser = true)
-            UserChatBubble("Equipo Altos de carpay", "La salida quedó registrada a las 21:25: son 25 min adicionales. El cargo propuesto es de $12.500 y aún no se ha cobrado.", "21:35", isUser = false)
-            UserChatBubble("Tú · Camila", "Gracias. ¿Me comparten el detalle del cálculo?", "21:37 · Enviado", isUser = true)
-
-            mensajesExtra.forEach { msg ->
-                UserChatBubble("Tú · Camila", msg, "Ahora · Enviado", isUser = true)
-            }
-
-            // Input de respuesta
             Surface(
                 shape = RoundedCornerShape(14.dp),
                 color = CarpayWhite,
                 border = BorderStroke(1.dp, CarpayInputBorder),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = nuevoAsunto,
+                        onValueChange = { nuevoAsunto = it },
+                        label = { Text("Asunto") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     OutlinedTextField(
                         value = nuevoMensaje,
                         onValueChange = { nuevoMensaje = it },
                         placeholder = { Text("Escribe tu mensaje...", fontSize = 13.sp) },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.AttachFile, null, tint = CarpayTextSecondary, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Adjuntar", fontSize = 12.sp, color = CarpayTextSecondary)
-                        }
-                        TextButton(onClick = {
-                            if (nuevoMensaje.isNotBlank()) {
-                                mensajesExtra = mensajesExtra + nuevoMensaje
-                                nuevoMensaje = ""
+                        TextButton(
+                            onClick = {
+                                if (nuevoMensaje.isNotBlank() && nuevoAsunto.isNotBlank()) {
+                                    consultasViewModel.crearConsulta(nuevoAsunto, nuevoMensaje)
+                                    nuevoMensaje = ""
+                                }
                             }
-                        }) {
+                        ) {
                             Text("Enviar", fontWeight = FontWeight.Bold, color = CarpayPrimaryGreen)
                             Spacer(modifier = Modifier.width(4.dp))
                             Icon(Icons.AutoMirrored.Outlined.Send, null, tint = CarpayPrimaryGreen, modifier = Modifier.size(16.dp))

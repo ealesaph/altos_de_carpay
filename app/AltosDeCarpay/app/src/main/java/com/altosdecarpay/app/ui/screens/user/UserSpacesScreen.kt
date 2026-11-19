@@ -9,26 +9,37 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.altosdecarpay.app.data.remote.NetworkResult
 import com.altosdecarpay.app.ui.theme.*
+import com.altosdecarpay.app.ui.viewmodel.ServiciosViewModel
 
 @Composable
 fun UserSpacesScreen(
-    reservaId: String = "RES-0261",
+    reservaId: String = "RES-0001",
+    serviciosViewModel: ServiciosViewModel = viewModel(),
     onBackClick: () -> Unit = {},
     onTabSelected: (UserTab) -> Unit = {}
 ) {
+    val sectoresState by serviciosViewModel.sectores.collectAsState()
+
+    LaunchedEffect(Unit) {
+        serviciosViewModel.loadSectores()
+    }
+
+    val sectores = (sectoresState as? NetworkResult.Success)?.data ?: emptyList()
+
     Scaffold(
         topBar = { UserTopBar() },
-        bottomBar = { UserBottomBar(selectedTab = UserTab.RESERVAS, onTabSelected = onTabSelected) },
+        bottomBar = { UserBottomBar(selectedTab = UserTab.EXPLORAR, onTabSelected = onTabSelected) },
         containerColor = CarpayBackground
     ) { innerPadding ->
         Column(
@@ -40,72 +51,68 @@ fun UserSpacesScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             UserScreenHeader(
-                title = "Tus espacios",
-                subtitle = "Estos son los rincones que puedes disfrutar en tu próximo encuentro.",
+                title = "Espacios del recinto",
+                subtitle = "Sectores disponibles en Altos de Carpay.",
                 showBackButton = true,
                 onBackClick = onBackClick
             )
 
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = CarpayGreenLight,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("TU RESERVA · $reservaId", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CarpayPrimaryGreen)
-                        Text("7 nov. 2026", fontSize = 11.sp, color = CarpayTextSecondary)
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("Un almuerzo en familia", fontFamily = FontFamily.Serif, fontSize = 20.sp, color = CarpayTextPrimary)
-                    Text("Para disfrutar de 13:00 a 18:00", fontSize = 12.sp, color = CarpayPrimaryGreen)
-                }
-            }
-
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Para compartir y desconectar", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
-                Text("2 espacios", fontSize = 12.sp, color = CarpayTextSecondary)
+                Text("${sectores.size} espacios", fontSize = 12.sp, color = CarpayTextSecondary)
             }
 
-            SpaceShowcaseCard(
-                title = "Terraza superior",
-                description = "Parrilla y mesas para compartir el almuerzo.",
-                icon = Icons.Outlined.Home,
-                bannerColor = Color(0xFF3E5641)
-            )
-
-            SpaceShowcaseCard(
-                title = "Mirador",
-                description = "Espacio al aire libre para descansar y conversar.",
-                icon = Icons.Outlined.Park,
-                bannerColor = Color(0xFF4F6D52)
-            )
-        }
-    }
-}
-
-@Composable
-private fun SpaceShowcaseCard(title: String, description: String, icon: ImageVector, bannerColor: Color) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = CarpayWhite,
-        border = BorderStroke(1.dp, CarpayInputBorder),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(130.dp)
-                    .background(bannerColor)
-            ) {
-                Icon(icon, null, tint = CarpayWhite.copy(alpha = 0.85f), modifier = Modifier.size(48.dp))
-            }
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(title, fontFamily = FontFamily.Serif, fontSize = 22.sp, color = CarpayTextPrimary)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(description, fontSize = 13.sp, color = CarpayTextSecondary)
+            if (sectoresState is NetworkResult.Loading) {
+                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = CarpayPrimaryGreen)
+                }
+            } else {
+                sectores.forEachIndexed { index, sector ->
+                    val bgColor = if (index % 2 == 0) Color(0xFF3E5641) else Color(0xFF4F6D52)
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = CarpayWhite,
+                        border = BorderStroke(1.dp, CarpayInputBorder),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(120.dp)
+                                    .background(bgColor)
+                            ) {
+                                Icon(Icons.Outlined.Park, null, tint = CarpayWhite.copy(alpha = 0.85f), modifier = Modifier.size(44.dp))
+                            }
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(sector.nombre, fontFamily = FontFamily.Serif, fontSize = 21.sp, color = CarpayTextPrimary)
+                                    Text("$${sector.valorHora}/h", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = CarpayPrimaryGreen)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(sector.descripcion.ifBlank { "Sector del recinto" }, fontSize = 13.sp, color = CarpayTextSecondary)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (sector.estado == "Disponible") CarpayGreenLight else CarpayAmberBg
+                                ) {
+                                    Text(
+                                        sector.estado,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (sector.estado == "Disponible") CarpayPrimaryGreen else CarpayAmberText,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

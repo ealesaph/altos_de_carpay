@@ -13,42 +13,33 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.altosdecarpay.app.data.remote.NetworkResult
 import com.altosdecarpay.app.ui.theme.*
-
-data class EspacioPermisoUi(
-    val id: String,
-    val nombre: String,
-    val descripcion: String,
-    val etiquetaTipo: String,
-    val icon: ImageVector,
-    val estado: String // "Autorizado", "Pendiente", "Revocado"
-)
+import com.altosdecarpay.app.ui.viewmodel.ServiciosViewModel
 
 @Composable
 fun AdminSpacesControlScreen(
-    reservaId: String = "RES-0261",
+    reservaId: String = "RES-0001",
+    serviciosViewModel: ServiciosViewModel = viewModel(),
     onBackClick: () -> Unit = {},
     onTabSelected: (AdminTab) -> Unit = {}
 ) {
-    var espacios by remember {
-        mutableStateOf(
-            listOf(
-                EspacioPermisoUi("1", "Terraza superior", "Parrilla y mesas para compartir el almuerzo.", "Espacio principal", Icons.Outlined.Home, "Autorizado"),
-                EspacioPermisoUi("2", "Mirador", "Espacio al aire libre para descansar y conversar.", "Al aire libre", Icons.Outlined.Park, "Autorizado"),
-                EspacioPermisoUi("3", "Piscina", "Zona de baño para disfrutar en familia.", "Espacio opcional", Icons.Outlined.Pool, "Pendiente"),
-                EspacioPermisoUi("4", "Terraza inferior", "Rincón con sombra para descansar.", "Espacio opcional", Icons.Outlined.Weekend, "Revocado")
-            )
-        )
+    val sectoresState by serviciosViewModel.sectores.collectAsState()
+
+    LaunchedEffect(Unit) {
+        serviciosViewModel.loadSectores()
     }
 
-    val countAutorizados = espacios.count { it.estado == "Autorizado" }
-    val countPendientes = espacios.count { it.estado == "Pendiente" }
-    val countRevocados = espacios.count { it.estado == "Revocado" }
+    val sectores = (sectoresState as? NetworkResult.Success)?.data ?: emptyList()
+    val countDisponibles = sectores.count { it.estado == "Disponible" }
+    val countMantencion = sectores.count { it.estado == "Mantencion" }
+    val countInactivos = sectores.count { it.estado == "Inactivo" }
 
     Scaffold(
         topBar = { AdminTopBar() },
@@ -65,112 +56,91 @@ fun AdminSpacesControlScreen(
         ) {
             AdminScreenHeader(
                 title = "Control de espacios",
-                subtitle = "Gestiona las áreas que podrá usar el cliente durante su encuentro.",
+                subtitle = "Sectores del recinto registrados en la base de datos.",
                 showBackButton = true,
                 onBackClick = onBackClick
             )
 
-            // Resumen Reserva
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = CarpayWhite,
-                border = BorderStroke(1.dp, CarpayInputBorder),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(reservaId, fontSize = 12.sp, color = CarpayTextSecondary)
-                        Surface(shape = RoundedCornerShape(10.dp), color = CarpayGreenLight) {
-                            Text("Confirmada", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = CarpayPrimaryGreen, modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp))
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text("Un almuerzo en familia", fontFamily = FontFamily.Serif, fontSize = 20.sp, color = CarpayTextPrimary)
-                    Text("Terraza superior · 7 nov. 2026 · 13:00–18:00", fontSize = 12.sp, color = CarpayTextSecondary)
-                }
-            }
-
-            // Contadores
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Áreas para este encuentro", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
-                Text("${espacios.size} espacios", fontSize = 12.sp, color = CarpayTextSecondary)
+                Text("Sectores disponibles", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
+                Text("${sectores.size} sectores", fontSize = 12.sp, color = CarpayTextSecondary)
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                CounterBox("$countAutorizados", "Autorizados", CarpayPrimaryGreen, Modifier.weight(1f))
-                CounterBox("$countPendientes", "Pendiente", CarpayAmberText, Modifier.weight(1f))
-                CounterBox("$countRevocados", "Revocado", CarpayRedText, Modifier.weight(1f))
+                CounterBox("$countDisponibles", "Disponibles", CarpayPrimaryGreen, Modifier.weight(1f))
+                CounterBox("$countMantencion", "Mantención", CarpayAmberText, Modifier.weight(1f))
+                CounterBox("$countInactivos", "Inactivos", CarpayRedText, Modifier.weight(1f))
             }
 
-            // Lista de espacios
-            espacios.forEach { espacio ->
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = CarpayWhite,
-                    border = BorderStroke(1.dp, CarpayInputBorder),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(CarpayGreenLight.copy(alpha = 0.6f))
-                            ) {
-                                Icon(espacio.icon, null, tint = CarpayPrimaryGreen)
+            if (sectoresState is NetworkResult.Loading) {
+                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = CarpayPrimaryGreen)
+                }
+            } else {
+                sectores.forEach { sector ->
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = CarpayWhite,
+                        border = BorderStroke(1.dp, CarpayInputBorder),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(CarpayGreenLight.copy(alpha = 0.6f))
+                                ) {
+                                    Icon(Icons.Outlined.Park, null, tint = CarpayPrimaryGreen)
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(sector.nombre, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = CarpayTextPrimary)
+                                    Text(sector.descripcion.ifBlank { "Sector del recinto" }, fontSize = 12.sp, color = CarpayTextSecondary)
+                                }
                             }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(espacio.nombre, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = CarpayTextPrimary)
-                                Text(espacio.descripcion, fontSize = 12.sp, color = CarpayTextSecondary)
-                            }
-                        }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            val (bg, fg, labelEstado) = when (espacio.estado) {
-                                "Autorizado" -> Triple(CarpayGreenLight, CarpayPrimaryGreen, "Autorizado")
-                                "Pendiente" -> Triple(CarpayAmberBg, CarpayAmberText, "Pendiente de autorización")
-                                else -> Triple(CarpayRedBg, CarpayRedText, "Acceso revocado")
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                val (bg, fg, labelEstado) = when (sector.estado) {
+                                    "Disponible" -> Triple(CarpayGreenLight, CarpayPrimaryGreen, "Disponible")
+                                    "Mantencion" -> Triple(CarpayAmberBg, CarpayAmberText, "En mantención")
+                                    else -> Triple(CarpayRedBg, CarpayRedText, "Inactivo")
+                                }
+                                Surface(shape = RoundedCornerShape(8.dp), color = bg) {
+                                    Text(labelEstado, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = fg, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                                }
+                                Text("$${sector.valorHora} / hora", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = CarpayTextPrimary)
                             }
-                            Surface(shape = RoundedCornerShape(8.dp), color = bg) {
-                                Text(labelEstado, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = fg, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(espacio.etiquetaTipo, fontSize = 11.sp, color = CarpayTextSecondary)
-                        }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
 
-                        if (espacio.estado == "Autorizado") {
-                            OutlinedButton(
-                                onClick = {
-                                    espacios = espacios.map { if (it.id == espacio.id) it.copy(estado = "Revocado") else it }
-                                },
-                                shape = RoundedCornerShape(10.dp),
-                                border = BorderStroke(1.dp, CarpayRedText.copy(alpha = 0.4f)),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = CarpayRedText),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Outlined.Lock, null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Revocar acceso", fontWeight = FontWeight.SemiBold)
-                            }
-                        } else {
-                            Button(
-                                onClick = {
-                                    espacios = espacios.map { if (it.id == espacio.id) it.copy(estado = "Autorizado") else it }
-                                },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = CarpayPrimaryGreen, contentColor = CarpayWhite),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Outlined.VerifiedUser, null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Autorizar acceso", fontWeight = FontWeight.SemiBold)
+                            if (sector.estado == "Disponible") {
+                                OutlinedButton(
+                                    onClick = { serviciosViewModel.actualizarEstadoSector(sector.idSector, "Mantencion") },
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = BorderStroke(1.dp, CarpayAmberText.copy(alpha = 0.4f)),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = CarpayAmberText),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Outlined.Build, null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Poner en mantención", fontWeight = FontWeight.SemiBold)
+                                }
+                            } else {
+                                Button(
+                                    onClick = { serviciosViewModel.actualizarEstadoSector(sector.idSector, "Disponible") },
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = CarpayPrimaryGreen, contentColor = CarpayWhite),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Outlined.VerifiedUser, null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Habilitar sector", fontWeight = FontWeight.SemiBold)
+                                }
                             }
                         }
                     }
@@ -181,7 +151,7 @@ fun AdminSpacesControlScreen(
 }
 
 @Composable
-private fun CounterBox(count: String, label: String, color: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
+private fun CounterBox(count: String, label: String, color: Color, modifier: Modifier = Modifier) {
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = CarpayWhite,
