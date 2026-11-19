@@ -188,7 +188,17 @@ fun AdminExitConfirmScreen(
                 Button(
                     onClick = {
                         isSaving = true
-                        onConfirmExit(reserva.idFormateado)
+                        reservasViewModel.validarAcceso(
+                            id = reserva.idReserva,
+                            tipoRegistro = "Salida",
+                            onSuccess = {
+                                isSaving = false
+                                onConfirmExit(reserva.idFormateado)
+                            },
+                            onError = {
+                                isSaving = false
+                            }
+                        )
                     },
                     enabled = !isSaving,
                     shape = RoundedCornerShape(12.dp),

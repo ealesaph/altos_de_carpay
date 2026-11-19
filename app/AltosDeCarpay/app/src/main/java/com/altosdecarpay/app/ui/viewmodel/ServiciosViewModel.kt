@@ -3,6 +3,8 @@ package com.altosdecarpay.app.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.altosdecarpay.app.data.model.BitacoraIncidenciaRequest
+import com.altosdecarpay.app.data.model.BitacoraIncidenciaResponse
 import com.altosdecarpay.app.data.model.LogModificacionResponse
 import com.altosdecarpay.app.data.model.SectorResponse
 import com.altosdecarpay.app.data.model.ServicioCrearRequest
@@ -25,6 +27,9 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _logs = MutableStateFlow<NetworkResult<List<LogModificacionResponse>>>(NetworkResult.Loading)
     val logs: StateFlow<NetworkResult<List<LogModificacionResponse>>> = _logs
+
+    private val _incidencias = MutableStateFlow<NetworkResult<List<BitacoraIncidenciaResponse>>>(NetworkResult.Loading)
+    val incidencias: StateFlow<NetworkResult<List<BitacoraIncidenciaResponse>>> = _incidencias
 
     fun loadSectores() {
         viewModelScope.launch {
@@ -101,6 +106,50 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             } catch (e: Exception) {
                 _logs.value = NetworkResult.Error(e.message ?: "Error de conexión")
+            }
+        }
+    }
+
+    fun loadIncidencias(reservaId: Int? = null) {
+        viewModelScope.launch {
+            _incidencias.value = NetworkResult.Loading
+            try {
+                val response = api.getIncidencias(reservaId = reservaId)
+                if (response.isSuccessful) {
+                    _incidencias.value = NetworkResult.Success(response.body()?.results ?: emptyList())
+                } else {
+                    _incidencias.value = NetworkResult.Error("No se pudieron cargar las incidencias")
+                }
+            } catch (e: Exception) {
+                _incidencias.value = NetworkResult.Error(e.message ?: "Error de conexión")
+            }
+        }
+    }
+
+    fun crearIncidencia(
+        reservaId: Int,
+        titulo: String,
+        descripcion: String,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            try {
+                val response = api.crearIncidencia(
+                    BitacoraIncidenciaRequest(
+                        reserva = reservaId,
+                        titulo = titulo.trim(),
+                        descripcion = descripcion.trim()
+                    )
+                )
+                if (response.isSuccessful) {
+                    loadIncidencias(reservaId)
+                    onSuccess()
+                } else {
+                    onError("No se pudo guardar (la reserva podría estar finalizada en solo lectura).")
+                }
+            } catch (e: Exception) {
+                onError(e.message ?: "Error de conexión")
             }
         }
     }

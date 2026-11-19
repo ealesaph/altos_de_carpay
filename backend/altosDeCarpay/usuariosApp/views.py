@@ -66,6 +66,36 @@ class CambiarPasswordView(APIView):
         return Response({"detail": "Contraseña actualizada. Vuelva a iniciar sesión."})
 
 
+class MisDatosArcoView(APIView):
+    """Derecho de Acceso (Ley N° 21.719): entrega copia estructurada de los datos personales del titular."""
+
+    def get(self, request):
+        usuario = request.user
+        return Response({
+            "perfil": PerfilSerializer(usuario).data,
+            "consentimiento_datos": usuario.consentimiento_datos,
+            "total_reservas": usuario.reservas.count(),
+            "total_consultas": usuario.consultas.count(),
+        })
+
+
+class DesactivarCuentaArcoView(APIView):
+    """Derecho de Cancelación/Oposición (Ley N° 21.719): desactiva la cuenta y revoca sesiones."""
+
+    def post(self, request):
+        usuario = request.user
+        if usuario.es_admin:
+            return Response(
+                {"detail": "Un administrador no puede auto-desactivar su cuenta por esta vía."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        usuario.estado = Usuario.Estado.INACTIVO
+        usuario.save(update_fields=["estado"])
+        for token in OutstandingToken.objects.filter(user=usuario):
+            BlacklistedToken.objects.get_or_create(token=token)
+        return Response({"detail": "Cuenta desactivada y sesiones cerradas conforme a la Ley N° 21.719."})
+
+
 class UsuarioAdminViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
                           mixins.UpdateModelMixin, viewsets.GenericViewSet):
 

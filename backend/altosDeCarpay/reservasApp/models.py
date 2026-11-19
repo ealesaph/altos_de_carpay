@@ -60,6 +60,7 @@ class Reserva(models.Model):
         PENDIENTE = "Pendiente", "Pendiente"
         EN_PROCESO = "En Proceso", "En Proceso"
         CONFIRMADO = "Confirmado", "Confirmado"
+        FINALIZADO = "Finalizado", "Finalizado"
         CANCELADO = "Cancelado", "Cancelado"
 
     id_reserva = models.AutoField(primary_key=True)
@@ -219,3 +220,57 @@ class Review(models.Model):
 
     def __str__(self):
         return f"Review {self.pk} ({self.calificacion}/5)"
+
+
+class ValidacionAcceso(models.Model):
+
+    class TipoRegistro(models.TextChoices):
+        ENTRADA = "Entrada", "Entrada"
+        SALIDA = "Salida", "Salida"
+
+    id_validacion = models.AutoField(primary_key=True)
+    reserva = models.ForeignKey(Reserva, on_delete=models.PROTECT,
+                                related_name="validaciones_acceso", db_column="id_reserva")
+    token_qr = models.CharField(max_length=64)
+    tipo_registro = models.CharField(max_length=10, choices=TipoRegistro.choices)
+    fecha_hora = models.DateTimeField(auto_now_add=True)
+    validado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+                                     related_name="validaciones_realizadas", db_column="validado_por")
+    minutos_excedidos = models.IntegerField(default=0)
+    cargo_sobretiempo_propuesto = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+
+    class Meta:
+        db_table = "validacion_acceso"
+        ordering = ["-fecha_hora"]
+
+    def __str__(self):
+        return f"{self.tipo_registro} - Reserva {self.reserva_id} ({self.fecha_hora:%Y-%m-%d %H:%M})"
+
+
+class BitacoraIncidencia(models.Model):
+
+    id_incidencia = models.AutoField(primary_key=True)
+    reserva = models.ForeignKey(Reserva, on_delete=models.PROTECT,
+                                related_name="incidencias", db_column="id_reserva")
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+                              related_name="incidencias_registradas", db_column="id_autor")
+    titulo = models.CharField(max_length=120)
+    descripcion = models.TextField(max_length=2000)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "bitacora_incidencia"
+        ordering = ["-fecha_creacion"]
+
+    def __str__(self):
+        return f"INC-{self.pk:04d} - Reserva {self.reserva_id}"
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            raise PermissionError("Los registros de bitácora son inmutables (solo lectura).")
+        if self.reserva.estado == Reserva.Estado.FINALIZADO:
+            raise PermissionError("La reserva está finalizada; la bitácora está en modo solo lectura.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise PermissionError("Los registros de bitácora no pueden eliminarse.")

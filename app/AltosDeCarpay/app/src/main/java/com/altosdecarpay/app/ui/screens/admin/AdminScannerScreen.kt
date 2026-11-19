@@ -91,9 +91,9 @@ fun AdminScannerScreen(
                 onFound = { reserva ->
                     if (movimientoSeleccionado == "Ingreso") {
                         if (reserva.estado == "Confirmado") {
-                            reservasViewModel.cambiarEstado(
+                            reservasViewModel.validarAcceso(
                                 id = reserva.idReserva,
-                                estado = "En Proceso",
+                                tipoRegistro = "Entrada",
                                 onSuccess = {
                                     isProcessing = false
                                     onQrReadSuccess(reserva.idFormateado, "Ingreso")

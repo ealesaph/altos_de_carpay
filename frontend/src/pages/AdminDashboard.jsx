@@ -12,12 +12,15 @@ import {
   Search, 
   Bell
 } from 'lucide-react';
-import { getReservations, getSectors, hasSession, logout, updateSector } from '../api.js';
+import { exportReservationsCsv, getConsultas, getReservations, getSectors, hasSession, logout, replyConsulta, updateSector } from '../api.js';
 
 export default function AdminDashboard() {
   const [seccionActiva, setSeccionActiva] = useState('dashboard');
   const [reservas, setReservas] = useState([]);
   const [sectores, setSectores] = useState([]);
+  const [consultas, setConsultas] = useState([]);
+  const [respuestas, setRespuestas] = useState({});
+  const [respondiendoId, setRespondiendoId] = useState(null);
   const [sectorSeleccionado, setSectorSeleccionado] = useState('');
   const [tarifa, setTarifa] = useState('');
   const [guardandoSector, setGuardandoSector] = useState(false);
@@ -31,10 +34,11 @@ export default function AdminDashboard() {
       navigate('/login', { replace: true });
       return;
     }
-    Promise.all([getReservations(), getSectors()])
-      .then(([reservasApi, sectoresApi]) => {
+    Promise.all([getReservations(), getSectors(), getConsultas()])
+      .then(([reservasApi, sectoresApi, consultasApi]) => {
         setReservas(reservasApi);
         setSectores(sectoresApi);
+        setConsultas(consultasApi);
         if (sectoresApi.length) {
           setSectorSeleccionado(String(sectoresApi[0].id_sector));
           setTarifa(sectoresApi[0].valor_hora);
@@ -226,9 +230,11 @@ export default function AdminDashboard() {
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-sand-200/80 shadow-sm">
-              <span className="text-3xl font-serif font-bold text-forest-900 block">—</span>
+              <span className="text-3xl font-serif font-bold text-forest-900 block">
+                {consultas.filter((c) => c.estado === 'Pendiente').length}
+              </span>
               <span className="text-xs font-semibold text-gray-700 mt-1 block">Consultas pendientes</span>
-              <span className="text-[10px] text-amber-700">API no disponible</span>
+              <span className="text-[10px] text-amber-700">{consultas.length} totales en sistema</span>
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-sand-200/80 shadow-sm">
@@ -246,9 +252,13 @@ export default function AdminDashboard() {
                   Próximas reservas
                 </h2>
               </div>
-              <a href="#" className="text-xs font-semibold text-forest-800 hover:underline">
-                Ver calendario →
-              </a>
+              <button
+                type="button"
+                onClick={() => exportReservationsCsv().catch((e) => setError(e.message))}
+                className="text-xs font-semibold text-forest-800 hover:underline"
+              >
+                Exportar CSV (Excel) →
+              </button>
             </div>
 
             {/* Barra de búsqueda de la tabla */}
@@ -391,13 +401,59 @@ export default function AdminDashboard() {
 
             </div>
 
-            {/* LADO DERECHO: Estado de funciones pendientes */}
+            {/* LADO DERECHO: Consultas reales de clientes */}
             <div className="lg:col-span-6 space-y-6">
               <div className="bg-white p-6 rounded-3xl border border-sand-200/80 shadow-sm space-y-4">
                 <h3 className="font-serif text-lg font-semibold text-forest-900">Consultas</h3>
-                <p className="text-sm text-gray-600">
-                  La API y el esquema documentado todavía no incluyen consultas ni respuestas. Esta sección no registra datos.
-                </p>
+                {consultas.length === 0 ? (
+                  <p className="text-sm text-gray-600">No hay consultas registradas aún.</p>
+                ) : (
+                  <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                    {consultas.slice(0, 5).map((c) => (
+                      <div key={c.id_consulta} className="p-3 rounded-xl bg-sand-50/70 border border-sand-200 text-xs space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-forest-900">{c.asunto}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${c.estado === 'Respondida' ? 'bg-forest-100 text-forest-800' : 'bg-amber-100 text-amber-800'}`}>
+                            {c.estado}
+                          </span>
+                        </div>
+                        <p className="text-gray-700">{c.cliente_nombre}: {c.mensaje}</p>
+                        {c.respuesta ? (
+                          <p className="text-forest-800 font-medium">Respuesta: {c.respuesta}</p>
+                        ) : (
+                          <div className="flex gap-2 pt-1">
+                            <input
+                              type="text"
+                              placeholder="Escribir respuesta..."
+                              value={respuestas[c.id_consulta] || ''}
+                              onChange={(e) => setRespuestas((prev) => ({ ...prev, [c.id_consulta]: e.target.value }))}
+                              className="flex-1 px-2.5 py-1.5 rounded-lg border border-sand-300 bg-white focus:outline-none focus:border-forest-700"
+                            />
+                            <button
+                              type="button"
+                              disabled={respondiendoId === c.id_consulta || !(respuestas[c.id_consulta] || '').trim()}
+                              onClick={async () => {
+                                setRespondiendoId(c.id_consulta);
+                                try {
+                                  const actualizada = await replyConsulta(c.id_consulta, respuestas[c.id_consulta]);
+                                  setConsultas((prev) => prev.map((item) => item.id_consulta === actualizada.id_consulta ? actualizada : item));
+                                  setRespuestas((prev) => ({ ...prev, [c.id_consulta]: '' }));
+                                } catch (e) {
+                                  setError(e.message);
+                                } finally {
+                                  setRespondiendoId(null);
+                                }
+                              }}
+                              className="bg-forest-800 text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-forest-900 disabled:opacity-50"
+                            >
+                              Responder
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="bg-white p-6 rounded-3xl border border-sand-200/80 shadow-sm space-y-4">

@@ -5,7 +5,7 @@ from rest_framework import serializers
 from altosDeCarpayApp.texto import texto_obligatorio, limpiar_texto
 from usuariosApp.models import Usuario
 from . import services
-from .models import Pago, Reserva, Review, Sector, Servicio
+from .models import BitacoraIncidencia, Pago, Reserva, Review, Sector, Servicio, ValidacionAcceso
 
 class SectorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -190,3 +190,42 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def create(self, datos):
         return Review.objects.create(evaluador=self.context["request"].user, **datos)
+
+
+class ValidacionAccesoSerializer(serializers.ModelSerializer):
+    validado_por_correo = serializers.CharField(source="validado_por.correo", read_only=True)
+
+    class Meta:
+        model = ValidacionAcceso
+        fields = ["id_validacion", "reserva", "token_qr", "tipo_registro", "fecha_hora",
+                  "validado_por", "validado_por_correo", "minutos_excedidos", "cargo_sobretiempo_propuesto"]
+        read_only_fields = fields
+
+
+class ValidacionAccesoCrearSerializer(serializers.Serializer):
+    tipo_registro = serializers.ChoiceField(choices=ValidacionAcceso.TipoRegistro.choices)
+
+
+class BitacoraIncidenciaSerializer(serializers.ModelSerializer):
+    autor_nombre = serializers.CharField(source="autor.nombre_completo", read_only=True)
+    reserva_estado = serializers.CharField(source="reserva.estado", read_only=True)
+
+    class Meta:
+        model = BitacoraIncidencia
+        fields = ["id_incidencia", "reserva", "reserva_estado", "autor", "autor_nombre",
+                  "titulo", "descripcion", "fecha_creacion"]
+        read_only_fields = ["id_incidencia", "autor", "fecha_creacion"]
+
+    def validate_titulo(self, valor):
+        return texto_obligatorio(valor, "El título")
+
+    def validate_descripcion(self, valor):
+        return texto_obligatorio(valor, "La descripción")
+
+    def validate_reserva(self, reserva):
+        if reserva.estado == Reserva.Estado.FINALIZADO:
+            raise serializers.ValidationError("La reserva está finalizada; la bitácora está en modo solo lectura.")
+        return reserva
+
+    def create(self, datos):
+        return BitacoraIncidencia.objects.create(autor=self.context["request"].user, **datos)

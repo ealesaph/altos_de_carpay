@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.altosdecarpay.app.data.model.CambioEstadoRequest
 import com.altosdecarpay.app.data.model.PagoCrearRequest
 import com.altosdecarpay.app.data.model.ReservaResponse
+import com.altosdecarpay.app.data.model.ValidacionAccesoRequest
+import com.altosdecarpay.app.data.model.ValidacionAccesoResponse
 import com.altosdecarpay.app.data.remote.ApiClient
 import com.altosdecarpay.app.data.remote.NetworkResult
 import com.altosdecarpay.app.ui.utils.QrCodeGenerator
@@ -134,6 +136,29 @@ class ReservasViewModel(application: Application) : AndroidViewModel(application
                     onSuccess()
                 }
             } catch (_: Exception) { }
+        }
+    }
+
+    fun validarAcceso(
+        id: Int,
+        tipoRegistro: String,
+        onSuccess: (ValidacionAccesoResponse) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            try {
+                val response = api.validarAcceso(id, ValidacionAccesoRequest(tipoRegistro = tipoRegistro))
+                if (response.isSuccessful && response.body() != null) {
+                    loadReservaDetalle(id)
+                    loadReservas()
+                    onSuccess(response.body()!!)
+                } else {
+                    val err = response.errorBody()?.string() ?: "No se pudo validar el acceso."
+                    onError(err)
+                }
+            } catch (e: Exception) {
+                onError(e.message ?: "Error de conexión")
+            }
         }
     }
 }

@@ -3,7 +3,14 @@ from decimal import Decimal
 from .contexto import obtener_usuario_actual
 from .models import LogModificacion
 
-MODELOS_AUDITADOS = ("reservasApp.Sector", "reservasApp.Servicio", "reservasApp.Reserva", "reservasApp.Pago")
+MODELOS_AUDITADOS = (
+    "reservasApp.Sector",
+    "reservasApp.Servicio",
+    "reservasApp.Reserva",
+    "reservasApp.Pago",
+    "reservasApp.ValidacionAcceso",
+    "reservasApp.BitacoraIncidencia",
+)
 
 
 def _datos(instancia):

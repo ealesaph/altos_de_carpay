@@ -9,8 +9,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from altosDeCarpayApp.permissions import EsAdministrador
 from . import services
-from .models import Pago, Reserva, Review, Sector, Servicio
+from .models import BitacoraIncidencia, Pago, Reserva, Review, Sector, Servicio
 from .serializers import (
+    BitacoraIncidenciaSerializer,
     CambioEstadoSerializer,
     PagoCrearSerializer,
     PagoSerializer,
@@ -19,6 +20,8 @@ from .serializers import (
     ReviewSerializer,
     SectorSerializer,
     ServicioSerializer,
+    ValidacionAccesoCrearSerializer,
+    ValidacionAccesoSerializer,
 )
 
 class CatalogoViewSet(viewsets.ModelViewSet):
@@ -117,6 +120,20 @@ class ReservaViewSet(
         pago = services.registrar_pago(reserva=reserva, usuario=request.user, **serializador.validated_data)
         return Response(PagoSerializer(pago).data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=["get", "post"], url_path="validar-acceso", permission_classes=[EsAdministrador])
+    def validar_acceso(self, request, pk=None):
+        reserva = self.get_object()
+        if request.method == "GET":
+            return Response(ValidacionAccesoSerializer(reserva.validaciones_acceso.all(), many=True).data)
+        serializador = ValidacionAccesoCrearSerializer(data=request.data)
+        serializador.is_valid(raise_exception=True)
+        validacion = services.registrar_validacion_acceso(
+            reserva=reserva,
+            tipo_registro=serializador.validated_data["tipo_registro"],
+            validado_por=request.user,
+        )
+        return Response(ValidacionAccesoSerializer(validacion).data, status=status.HTTP_201_CREATED)
+
     @action(detail=False, methods=["get"], url_path="exportar", permission_classes=[EsAdministrador])
     def exportar(self, request):
         respuesta = HttpResponse(content_type="text/csv; charset=utf-8")
@@ -141,3 +158,20 @@ class ReviewViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.Gen
         if usuario.es_admin:
             return consulta
         return consulta.filter(Q(evaluador=usuario) | Q(evaluado=usuario))
+
+
+class BitacoraIncidenciaViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    serializer_class = BitacoraIncidenciaSerializer
+    permission_classes = [EsAdministrador]
+
+    def get_queryset(self):
+        consulta = BitacoraIncidencia.objects.select_related("reserva", "autor")
+        reserva_id = self.request.query_params.get("reserva", "")
+        if reserva_id.isdigit():
+            consulta = consulta.filter(reserva_id=int(reserva_id))
+        return consulta

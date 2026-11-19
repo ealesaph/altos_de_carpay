@@ -46,7 +46,7 @@ fun UserReservationsScreen(
         allReservas.filter { it.estado in listOf("Pendiente", "Confirmado", "En Proceso") }
     }
     val historial = remember(allReservas) {
-        allReservas.filter { it.estado == "Cancelado" }
+        allReservas.filter { it.estado in listOf("Finalizado", "Cancelado") }
     }
 
     val nombreUsuario = SessionState.userName.ifBlank { "Usuario" }

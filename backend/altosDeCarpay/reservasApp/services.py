@@ -8,7 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from altosDeCarpayApp.excepciones import ConflictoDeNegocio
-from .models import Pago, Reserva, ReservaSector, ReservaServicio, Sector
+from .models import Pago, Reserva, ReservaSector, ReservaServicio, Sector, ValidacionAcceso
 
 logger = logging.getLogger("reservas")
 
@@ -17,7 +17,8 @@ ESTADOS_QUE_BLOQUEAN = (Reserva.Estado.PENDIENTE, Reserva.Estado.CONFIRMADO, Res
 TRANSICIONES_PERMITIDAS = {
     Reserva.Estado.PENDIENTE: (Reserva.Estado.CONFIRMADO, Reserva.Estado.CANCELADO),
     Reserva.Estado.CONFIRMADO: (Reserva.Estado.EN_PROCESO, Reserva.Estado.CANCELADO),
-    Reserva.Estado.EN_PROCESO: (),
+    Reserva.Estado.EN_PROCESO: (Reserva.Estado.FINALIZADO,),
+    Reserva.Estado.FINALIZADO: (),
     Reserva.Estado.CANCELADO: (),
 }
 
@@ -175,6 +176,39 @@ def cambiar_estado(*, reserva, nuevo_estado):
     reserva.estado = nuevo_estado
     reserva.save(update_fields=["estado"])
     return reserva
+
+
+@transaction.atomic
+def registrar_validacion_acceso(*, reserva, tipo_registro, validado_por):
+    reserva = Reserva.objects.select_for_update().get(pk=reserva.pk)
+    minutos_excedidos = 0
+    cargo_propuesto = Decimal("0.00")
+
+    if tipo_registro == ValidacionAcceso.TipoRegistro.ENTRADA:
+        if reserva.estado != Reserva.Estado.CONFIRMADO:
+            raise ConflictoDeNegocio(f"Solo puede registrar entrada para reservas confirmadas (estado actual: {reserva.estado}).")
+        reserva.estado = Reserva.Estado.EN_PROCESO
+        reserva.save(update_fields=["estado"])
+    elif tipo_registro == ValidacionAcceso.TipoRegistro.SALIDA:
+        if reserva.estado != Reserva.Estado.EN_PROCESO:
+            raise ConflictoDeNegocio(f"Solo puede registrar salida para reservas en proceso (estado actual: {reserva.estado}).")
+        ahora = timezone.now()
+        if ahora > reserva.fin:
+            minutos_excedidos = int((ahora - reserva.fin).total_seconds() // 60)
+            cargo_propuesto = Decimal(minutos_excedidos) * Decimal("500.00")
+        reserva.estado = Reserva.Estado.FINALIZADO
+        reserva.save(update_fields=["estado"])
+    else:
+        raise ValidationError({"tipo_registro": "Tipo de registro inválido."})
+
+    return ValidacionAcceso.objects.create(
+        reserva=reserva,
+        token_qr=reserva.token_qr,
+        tipo_registro=tipo_registro,
+        validado_por=validado_por,
+        minutos_excedidos=minutos_excedidos,
+        cargo_sobretiempo_propuesto=cargo_propuesto,
+    )
 
 def cancelar_reservas_impagas():
     limite = timezone.now() - timedelta(hours=settings.PLAZO_PAGO_ANTICIPO_HORAS)

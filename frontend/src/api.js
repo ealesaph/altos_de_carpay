@@ -120,6 +120,40 @@ export async function cancelReservation(id) {
   return apiRequest(`/reservas/${id}/cancelar/`, { method: 'POST' });
 }
 
+export async function getConsultas() {
+  const data = await apiRequest('/consultas/');
+  return Array.isArray(data) ? data : data.results;
+}
+
+export async function replyConsulta(id, respuesta) {
+  return apiRequest(`/consultas/${id}/responder/`, {
+    method: 'POST',
+    body: JSON.stringify({ respuesta }),
+  });
+}
+
+export async function exportReservationsCsv() {
+  let response = await sendRequest('/reservas/exportar/', { method: 'GET' }, localStorage.getItem(ACCESS_TOKEN_KEY));
+  if (response.status === 401) {
+    const newAccessToken = await refreshAccessToken();
+    if (newAccessToken) {
+      response = await sendRequest('/reservas/exportar/', { method: 'GET' }, newAccessToken);
+    }
+  }
+  if (!response.ok) {
+    throw new Error(`No se pudo exportar el archivo (HTTP ${response.status}).`);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'reservas_altos_de_carpay.csv';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function logout() {
   const refresh = localStorage.getItem(REFRESH_TOKEN_KEY);
   try {

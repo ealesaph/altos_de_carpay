@@ -29,6 +29,12 @@ interface ApiService {
     @POST("auth/cambiar-password/")
     suspend fun cambiarPassword(@Body request: CambioPasswordRequest): Response<Map<String, String>>
 
+    @GET("auth/mis-datos/")
+    suspend fun getMisDatosArco(): Response<Map<String, Any>>
+
+    @POST("auth/desactivar-cuenta/")
+    suspend fun desactivarCuentaArco(): Response<Map<String, String>>
+
     // ── Sectores ──
 
     @GET("sectores/")
@@ -57,13 +63,30 @@ interface ApiService {
         @Body body: Map<String, String>
     ): Response<ServicioResponse>
 
-    // ── Auditoría ──
+    // ── Auditoría & Bitácora ──
 
     @GET("auditoria/logs/")
     suspend fun getAuditoriaLogs(
         @Query("tabla") tabla: String? = null,
         @Query("id_registro") idRegistro: Int? = null
     ): Response<PaginatedResponse<LogModificacionResponse>>
+
+    @GET("reservas/{id}/validar-acceso/")
+    suspend fun getValidacionesAcceso(@Path("id") id: Int): Response<List<ValidacionAccesoResponse>>
+
+    @POST("reservas/{id}/validar-acceso/")
+    suspend fun validarAcceso(
+        @Path("id") id: Int,
+        @Body request: ValidacionAccesoRequest
+    ): Response<ValidacionAccesoResponse>
+
+    @GET("incidencias/")
+    suspend fun getIncidencias(
+        @Query("reserva") reservaId: Int? = null
+    ): Response<PaginatedResponse<BitacoraIncidenciaResponse>>
+
+    @POST("incidencias/")
+    suspend fun crearIncidencia(@Body request: BitacoraIncidenciaRequest): Response<BitacoraIncidenciaResponse>
 
     // ── Reservas ──
 
