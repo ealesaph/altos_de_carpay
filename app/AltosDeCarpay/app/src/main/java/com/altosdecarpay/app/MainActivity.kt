@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
 import com.altosdecarpay.app.ui.screens.LoginScreen
+import com.altosdecarpay.app.ui.screens.RegisterScreen
 import com.altosdecarpay.app.ui.screens.admin.*
 import com.altosdecarpay.app.ui.screens.user.*
 import com.altosdecarpay.app.ui.theme.AltosDeCarpayTheme
@@ -30,6 +31,7 @@ class MainActivity : ComponentActivity() {
 
 sealed class AppRoute {
     data object Login : AppRoute()
+    data object Register : AppRoute()
 
     // --- Rutas Administrador ---
     data object AdminDashboard : AppRoute()
@@ -78,6 +80,9 @@ fun AppNavigationHost(
 
     BackHandler(enabled = currentRoute != AppRoute.Login) {
         currentRoute = when (currentRoute) {
+            // Back Acceso
+            is AppRoute.Register -> AppRoute.Login
+
             // Back Admin
             is AppRoute.AdminExitConfirm -> AppRoute.AdminScanner
             is AppRoute.AdminSpacesControl -> AppRoute.AdminReservaDetail((currentRoute as AppRoute.AdminSpacesControl).reservaId)
@@ -113,7 +118,19 @@ fun AppNavigationHost(
                     }
                 },
                 onNavigateToRegister = {
-                    onShowToast("Próximamente: Registro de usuario")
+                    currentRoute = AppRoute.Register
+                }
+            )
+        }
+
+        is AppRoute.Register -> {
+            RegisterScreen(
+                onRegisterSuccess = {
+                    onShowToast("¡Cuenta creada con éxito!")
+                    currentRoute = AppRoute.UserReservations
+                },
+                onNavigateToLogin = {
+                    currentRoute = AppRoute.Login
                 }
             )
         }
