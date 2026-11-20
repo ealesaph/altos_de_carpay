@@ -52,6 +52,11 @@ export default function SelectDateSpace() {
       setError('Selecciona un espacio disponible.');
       return;
     }
+    const horasNumero = Number(horas);
+    if (!Number.isInteger(horasNumero) || horasNumero < 1 || horasNumero > 24) {
+      setError('Ingresa una cantidad entera de horas entre 1 y 24.');
+      return;
+    }
     if (!aceptaCondiciones) {
       setError('Debes aceptar las condiciones de arriendo antes de reservar.');
       return;
@@ -174,12 +179,20 @@ export default function SelectDateSpace() {
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-2">Horas</label>
                 <input
-                  type="number"
-                  min="1"
-                  max="24"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={2}
                   required
                   value={horas}
-                  onChange={(event) => setHoras(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.ctrlKey || event.metaKey || event.altKey) return;
+                    const teclasPermitidas = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'];
+                    if (!teclasPermitidas.includes(event.key) && !/^\d$/.test(event.key)) {
+                      event.preventDefault();
+                    }
+                  }}
+                  onChange={(event) => setHoras(event.target.value.replace(/\D/g, ''))}
                   className="w-full border border-sand-200 rounded-xl p-3"
                 />
               </div>
