@@ -10,20 +10,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="27f37140-4fed-45e5-8c83-01dfd59c4c02" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/executionHistory/executionHistory.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/executionHistory/executionHistory.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/fileHashes.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/fileHashes.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/resourceHashesCache.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/configuration-cache/2kzhjg6zdhpbqhgucw8y5xhjs/candidates.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/configuration-cache/2kzhjg6zdhpbqhgucw8y5xhjs/candidates.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/data/remote/ApiClient.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/data/remote/ApiClient.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/altosDeCarpay/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/altosDeCarpay/settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/services.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/services.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../frontend/src/api.js" beforeDir="false" afterPath="$PROJECT_DIR$/../../frontend/src/api.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../frontend/src/pages/Confirmation.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../../frontend/src/pages/Confirmation.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

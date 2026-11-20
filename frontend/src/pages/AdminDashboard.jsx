@@ -5,7 +5,6 @@ import {
   CalendarDays,
   Tags,
   MessageSquare,
-  Settings,
   ExternalLink,
   LogOut,
   Clock,
@@ -250,7 +249,6 @@ export default function AdminDashboard() {
     catalogo: 'Catálogo y precios',
     consultas: 'Consultas',
     usuarios: 'Usuarios y personal',
-    config: 'Configuración',
   }[seccionActiva] || 'Vista general';
 
   const esSuperusuario = Boolean(adminPerfil?.is_superuser);
@@ -411,17 +409,6 @@ export default function AdminDashboard() {
               </span>
               <span className="text-[10px] bg-forest-950/60 px-2 py-0.5 rounded-full">{usuarios.length}</span>
             </button>
-
-            <button
-              type="button"
-              onClick={() => setSeccionActiva('config')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
-                seccionActiva === 'config' ? 'bg-forest-800 text-white font-semibold' : 'text-gray-300 hover:bg-forest-800/50'
-              }`}
-            >
-              <Settings size={16} />
-              <span>Configuración</span>
-            </button>
           </nav>
         </div>
 
@@ -483,7 +470,6 @@ export default function AdminDashboard() {
               ['catalogo', 'Catálogo y precios'],
               ['consultas', 'Consultas'],
               ['usuarios', 'Usuarios y personal'],
-              ['config', 'Configuración'],
             ].map(([id, label]) => (
               <button
                 key={id}
@@ -1292,34 +1278,6 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {seccionActiva === 'config' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white p-6 rounded-3xl border border-sand-200/80 shadow-sm space-y-3">
-                <h3 className="font-serif text-lg font-semibold text-forest-900">Reglas y operación del sistema</h3>
-                <p className="text-sm text-gray-600">
-                  La disponibilidad se valida automáticamente al crear cada reserva para evitar superposiciones horarias.
-                </p>
-                <p className="text-xs text-gray-500">
-                  El anticipo (30%), plazo de pago (24 horas) y credenciales SMTP se administran desde las variables de entorno del backend.
-                </p>
-              </div>
-              <div className="bg-white p-6 rounded-3xl border border-sand-200/80 shadow-sm space-y-3">
-                <h3 className="font-serif text-lg font-semibold text-forest-900">Administración avanzada</h3>
-                <p className="text-sm text-gray-600">
-                  Para gestionar usuarios, auditoría detallada o registros directos de base de datos, accede al panel Django Admin.
-                </p>
-                <a
-                  href="/admin/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 bg-forest-800 text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-forest-900"
-                >
-                  Abrir Django Admin <ExternalLink size={14} />
-                </a>
               </div>
             </div>
           )}
