@@ -3,11 +3,11 @@ import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
 from django.conf import settings
-from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from altosDeCarpayApp.excepciones import ConflictoDeNegocio
+from .emails import enviar_correo_reserva
 from .models import Pago, Reserva, ReservaSector, ReservaServicio, Sector, ValidacionAcceso
 
 logger = logging.getLogger("reservas")
@@ -124,38 +124,18 @@ def registrar_pago(*, reserva, usuario, tipo_pago, metodo_pago, simular_rechazo=
         reserva=reserva, monto=monto, tipo_pago=tipo_pago, metodo_pago=metodo_pago,
         transaccion_id=transaccion, estado_pago=estado,
     )
-    if estado == Pago.Estado.APROBADO and reserva.estado == Reserva.Estado.PENDIENTE and reserva.anticipo_pagado:
-        reserva.estado = Reserva.Estado.CONFIRMADO
-        reserva.save(update_fields=["estado"])
-        transaction.on_commit(lambda: enviar_correo_confirmacion(reserva.pk))
+    if estado == Pago.Estado.APROBADO:
+        if reserva.estado == Reserva.Estado.PENDIENTE and reserva.anticipo_pagado:
+            reserva.estado = Reserva.Estado.CONFIRMADO
+            reserva.save(update_fields=["estado"])
+            transaction.on_commit(lambda: enviar_correo_reserva(reserva.pk, motivo="confirmacion"))
+        elif reserva.estado in (Reserva.Estado.CONFIRMADO, Reserva.Estado.EN_PROCESO, Reserva.Estado.FINALIZADO):
+            transaction.on_commit(lambda: enviar_correo_reserva(reserva.pk, motivo="pago"))
     return pago
 
 
 def enviar_correo_confirmacion(reserva_id):
-    try:
-        reserva = (Reserva.objects.select_related("usuario")
-                   .prefetch_related("sectores_reservados__sector", "servicios_reservados__servicio")
-                   .get(pk=reserva_id))
-        lineas = [f"- {r.sector.nombre}: {r.horas} h x ${r.valor_hora:,.0f} = ${r.subtotal:,.0f}"
-                  for r in reserva.sectores_reservados.all()]
-        lineas += [f"- {r.servicio.nombre}: {r.cantidad} x ${r.valor_unitario:,.0f} = ${r.subtotal:,.0f}"
-                   for r in reserva.servicios_reservados.all()]
-        cuerpo = (
-            f"Hola {reserva.usuario.nombre},\n\n"
-            f"Tu reserva N° {reserva.pk} para el {reserva.fecha:%d-%m-%Y} a las "
-            f"{reserva.hora_inicio:%H:%M} fue confirmada.\n\n"
-            "Desglose:\n" + "\n".join(lineas) + "\n\n"
-            f"Total: ${reserva.monto_total:,.0f}\n"
-            f"Pagado: ${reserva.monto_pagado:,.0f}\n"
-            f"Saldo pendiente: ${reserva.saldo_pendiente:,.0f}\n\n"
-            "Reglas de cancelación: una reserva sin pago del anticipo "
-            f"({settings.ANTICIPO_PORCENTAJE}%) dentro de {settings.PLAZO_PAGO_ANTICIPO_HORAS} horas "
-            "se cancela automáticamente.\n\nAltos de Carpay"
-        )
-        send_mail(f"Altos de Carpay - Reserva N° {reserva.pk} confirmada", cuerpo, None,
-                  [reserva.usuario.correo], fail_silently=False)
-    except Exception:  # noqa: BLE001 - el correo nunca debe tumbar una operación ya confirmada
-        logger.exception("No se pudo enviar el correo de la reserva %s", reserva_id)
+    return enviar_correo_reserva(reserva_id, motivo="confirmacion", fail_silently=True)
 
 @transaction.atomic
 def cancelar_reserva(*, reserva, solicitante):

@@ -56,9 +56,14 @@ export default function ClientReservations() {
       <header className="bg-white border-b border-sand-200">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
           <Link to="/" className="font-serif text-xl font-bold text-forest-900">Altos de carpay</Link>
-          <button type="button" onClick={salir} className="text-sm text-gray-600 flex items-center gap-2">
-            <LogOut size={15} /> Salir
-          </button>
+          <div className="flex items-center gap-4">
+            <Link to="/mi-cuenta" className="text-sm font-medium text-forest-800 hover:underline">
+              Mi cuenta
+            </Link>
+            <button type="button" onClick={salir} className="text-sm text-gray-600 flex items-center gap-2">
+              <LogOut size={15} /> Salir
+            </button>
+          </div>
         </div>
       </header>
 

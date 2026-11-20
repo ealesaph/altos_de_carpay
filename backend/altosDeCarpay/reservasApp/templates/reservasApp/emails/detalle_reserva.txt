@@ -1,0 +1,30 @@
+Altos de Carpay - {{ titulo }}
+========================================
+
+Hola {{ reserva.usuario.nombre_completo }},
+
+{{ mensaje_intro }}
+
+Resumen de tu reserva:
+- N° de reserva: {{ reserva.pk }}
+- Estado: {{ reserva.estado }}
+- Fecha: {{ reserva.fecha|date:"d/m/Y" }}
+- Horario: {{ reserva.hora_inicio|time:"H:i" }} - {{ hora_fin|time:"H:i" }} ({{ reserva.horas_reservadas }} horas)
+- Código de acceso (QR): {{ reserva.token_qr }}
+
+Detalle de espacios y servicios:
+{% for item in sectores %}- {{ item.nombre }} (Sector): {{ item.cantidad }} h x ${{ item.valor_unitario }} = ${{ item.subtotal }}
+{% endfor %}{% for item in servicios %}- {{ item.nombre }} (Servicio): {{ item.cantidad }} x ${{ item.valor_unitario }} = ${{ item.subtotal }}
+{% endfor %}
+Resumen financiero:
+- Total: ${{ total_formateado }}
+- Pagado: ${{ pagado_formateado }}
+- Saldo pendiente: ${{ saldo_formateado }}
+{% if pagos %}
+Pagos registrados:
+{% for pago in pagos %}- {{ pago.tipo }} ({{ pago.metodo }}) el {{ pago.fecha }}: ${{ pago.monto }}
+{% endfor %}{% endif %}
+Política de cancelación:
+Una reserva sin pago del anticipo ({{ anticipo_porcentaje }}%) dentro de {{ plazo_horas }} horas se cancela automáticamente.
+
+Altos de Carpay

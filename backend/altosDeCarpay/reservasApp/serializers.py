@@ -24,6 +24,8 @@ class SectorSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Envíe una lista de hasta 10 URL.")
         validador = URLValidator(schemes=["http", "https"])
         for url in urls:
+            if isinstance(url, str) and url.startswith("/media/") and ".." not in url:
+                continue
             try:
                 validador(url)
             except (DjangoValidationError, TypeError):

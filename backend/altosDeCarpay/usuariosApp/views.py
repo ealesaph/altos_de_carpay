@@ -6,10 +6,11 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from altosDeCarpayApp.permissions import EsAdministrador
+from altosDeCarpayApp.permissions import EsAdministrador, EsSuperusuario
 from .models import Usuario
 from .serializers import (
     CambioPasswordSerializer,
+    CrearPersonalAdminSerializer,
     LoginSerializer,
     LogoutSerializer,
     PerfilSerializer,
@@ -97,11 +98,27 @@ class DesactivarCuentaArcoView(APIView):
 
 
 class UsuarioAdminViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
-                          mixins.UpdateModelMixin, viewsets.GenericViewSet):
+                          mixins.CreateModelMixin, mixins.UpdateModelMixin,
+                          viewsets.GenericViewSet):
 
     serializer_class = UsuarioAdminSerializer
-    permission_classes = [EsAdministrador]
-    http_method_names = ["get", "patch", "head", "options"]
+    http_method_names = ["get", "post", "patch", "head", "options"]
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [EsSuperusuario()]
+        return [EsAdministrador()]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return CrearPersonalAdminSerializer
+        return UsuarioAdminSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializador = self.get_serializer(data=request.data)
+        serializador.is_valid(raise_exception=True)
+        usuario = serializador.save()
+        return Response(UsuarioAdminSerializer(usuario).data, status=status.HTTP_201_CREATED)
 
     def get_queryset(self):
         consulta = Usuario.objects.all().order_by("id_usuario")

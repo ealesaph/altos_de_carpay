@@ -16,26 +16,14 @@
       <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/fileHashes.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/resourceHashesCache.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/configuration-cache/2kzhjg6zdhpbqhgucw8y5xhjs/candidates.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/configuration-cache/2kzhjg6zdhpbqhgucw8y5xhjs/candidates.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/data/model/AuditoriaModels.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/data/model/AuditoriaModels.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/data/remote/ApiService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/data/remote/ApiService.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/admin/AdminBitacoraScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/admin/AdminBitacoraScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/admin/AdminExitConfirmScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/admin/AdminExitConfirmScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/admin/AdminScannerScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/admin/AdminScannerScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/user/UserReservationsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/user/UserReservationsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/viewmodel/ReservasViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/viewmodel/ReservasViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/viewmodel/ServiciosViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/viewmodel/ServiciosViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/data/remote/ApiClient.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/data/remote/ApiClient.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/altosDeCarpay/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/altosDeCarpay/settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/auditoriaApp/signals.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/auditoriaApp/signals.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/serializers.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/serializers.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/services.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/services.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/urls.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/usuariosApp/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/usuariosApp/urls.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/usuariosApp/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/usuariosApp/views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../../frontend/src/api.js" beforeDir="false" afterPath="$PROJECT_DIR$/../../frontend/src/api.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../frontend/src/pages/AdminDashboard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../../frontend/src/pages/AdminDashboard.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../frontend/src/pages/Confirmation.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../../frontend/src/pages/Confirmation.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,7 +33,7 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[PhysicalDevice::serial=RFCY10CZX2B]" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[LocalEmulator::path=C:\Users\MrRaz\.android\avd\Medium_Phone_2.avd]" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />

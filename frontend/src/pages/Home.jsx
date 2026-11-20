@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getSectors } from '../api.js';
+import { createConsulta, getSectors, getSessionUser, hasSession, logout } from '../api.js';
+import defaultSpaceImg from '../assets/default-space.svg';
 import { 
   Sparkles, 
   MapPin, 
@@ -19,6 +20,17 @@ export default function Home() {
   const [sectores, setSectores] = useState([]);
   const [errorCatalogo, setErrorCatalogo] = useState('');
   const [cargandoCatalogo, setCargandoCatalogo] = useState(true);
+  const [consultaForm, setConsultaForm] = useState({
+    nombre: '',
+    telefono: '',
+    espacio: '',
+    fecha: '',
+    mensaje: '',
+  });
+  const [enviandoConsulta, setEnviandoConsulta] = useState(false);
+  const [consultaExito, setConsultaExito] = useState('');
+  const [consultaError, setConsultaError] = useState('');
+  const [usuarioSesion, setUsuarioSesion] = useState(() => getSessionUser());
 
   useEffect(() => {
     let activo = true;
@@ -39,6 +51,48 @@ export default function Home() {
   }, []);
 
   const sectoresDisponibles = sectores.filter((sector) => sector.estado === 'Disponible');
+
+  const manejarEnvioConsulta = async (event) => {
+    event.preventDefault();
+    setConsultaError('');
+    setConsultaExito('');
+
+    if (!hasSession()) {
+      setConsultaError('Debes iniciar sesión como cliente para enviar tu consulta.');
+      return;
+    }
+    if (!consultaForm.mensaje.trim()) {
+      setConsultaError('Escribe tu mensaje o consulta antes de enviar.');
+      return;
+    }
+
+    const sectorElegido = sectores.find((s) => String(s.id_sector) === consultaForm.espacio);
+    const partesAsunto = [
+      sectorElegido ? `Consulta: ${sectorElegido.nombre}` : 'Consulta de disponibilidad',
+      consultaForm.fecha ? `(${consultaForm.fecha})` : '',
+    ].filter(Boolean);
+    const detallesContacto = [
+      consultaForm.nombre.trim() ? `Nombre: ${consultaForm.nombre.trim()}` : '',
+      consultaForm.telefono.trim() ? `Teléfono: ${consultaForm.telefono.trim()}` : '',
+    ].filter(Boolean);
+    const mensajeFinal = detallesContacto.length
+      ? `${detallesContacto.join(' · ')}\n${consultaForm.mensaje.trim()}`
+      : consultaForm.mensaje.trim();
+
+    setEnviandoConsulta(true);
+    try {
+      await createConsulta({
+        asunto: partesAsunto.join(' '),
+        mensaje: mensajeFinal,
+      });
+      setConsultaForm({ nombre: '', telefono: '', espacio: '', fecha: '', mensaje: '' });
+      setConsultaExito('Tu consulta fue enviada y procesada correctamente. Te responderemos a la brevedad.');
+    } catch (requestError) {
+      setConsultaError(requestError.message);
+    } finally {
+      setEnviandoConsulta(false);
+    }
+  };
 
   const toggleFaq = (index) => {
     setFaqAbierta(faqAbierta === index ? null : index);
@@ -91,17 +145,61 @@ export default function Home() {
             <a href="#contacto" className="hover:text-forest-900 transition-colors">Contacto</a>
           </nav>
 
-          <div className="flex items-center gap-3 sm:gap-4">
-            <Link 
-              to="/login" 
-              className="text-xs font-medium text-gray-700 hover:text-forest-900 px-3 py-1.5 rounded-full hover:bg-sand-100 transition-colors"
-            >
-              Mi cuenta
-            </Link>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {usuarioSesion ? (
+              <>
+                {usuarioSesion.rol === 'Admin' ? (
+                  <Link
+                    to="/admin"
+                    className="text-xs font-semibold text-forest-900 bg-forest-100 hover:bg-forest-200 px-3.5 py-2 rounded-full transition-colors"
+                  >
+                    Panel Admin
+                  </Link>
+                ) : (
+                  <Link
+                    to="/mis-reservas"
+                    className="text-xs font-medium text-gray-700 hover:text-forest-900 px-3 py-1.5 rounded-full hover:bg-sand-100 transition-colors"
+                  >
+                    Mis reservas
+                  </Link>
+                )}
+                <Link
+                  to="/mi-cuenta"
+                  className="text-xs font-semibold text-forest-900 border border-forest-800/30 bg-white hover:bg-sand-100 px-3.5 py-2 rounded-full transition-colors"
+                >
+                  {usuarioSesion.nombre ? `Mi cuenta (${usuarioSesion.nombre})` : 'Mi cuenta'}
+                </Link>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await logout();
+                    setUsuarioSesion(null);
+                  }}
+                  className="text-xs font-medium text-gray-500 hover:text-red-700 px-2.5 py-1.5 rounded-full hover:bg-red-50 transition-colors"
+                >
+                  Salir
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="text-xs font-semibold text-forest-900 border border-forest-800/30 bg-white hover:bg-sand-100 px-4 py-2 rounded-full transition-colors"
+                >
+                  Iniciar sesión
+                </Link>
+                <Link
+                  to="/registro"
+                  className="text-xs font-semibold text-forest-900 bg-forest-100 hover:bg-forest-200 px-4 py-2 rounded-full transition-colors"
+                >
+                  Registrarse
+                </Link>
+              </>
+            )}
 
             <a 
               href="#espacios" 
-              className="bg-forest-800 text-white text-xs font-semibold uppercase tracking-wider px-5 py-2.5 rounded-full hover:bg-forest-900 transition-all shadow-sm active:scale-95"
+              className="hidden sm:inline-block bg-forest-800 text-white text-xs font-semibold uppercase tracking-wider px-5 py-2.5 rounded-full hover:bg-forest-900 transition-all shadow-sm active:scale-95"
             >
               Explorar espacios
             </a>
@@ -219,17 +317,12 @@ export default function Home() {
           {sectoresDisponibles.map((sector) => (
             <article key={sector.id_sector} className="bg-white rounded-3xl overflow-hidden border border-sand-200/80 shadow-sm hover:shadow-md transition-all flex flex-col">
               <div className="h-64 w-full overflow-hidden bg-sand-100">
-                {sector.fotografias?.[0] ? (
-                  <img
-                    src={sector.fotografias[0]}
-                    alt={sector.nombre}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-forest-100 to-sand-200 text-forest-700">
-                    <Compass size={56} aria-hidden="true" />
-                  </div>
-                )}
+                <img
+                  src={sector.fotografias?.[0] || defaultSpaceImg}
+                  alt={sector.nombre}
+                  onError={(e) => { e.currentTarget.src = defaultSpaceImg; }}
+                  className="w-full h-full object-cover"
+                />
               </div>
 
               <div className="p-7 flex-1 flex flex-col justify-between">
@@ -438,13 +531,30 @@ export default function Home() {
               Consulta disponibilidad de fecha
             </h3>
             
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-4" onSubmit={manejarEnvioConsulta}>
+              {consultaExito && (
+                <div role="status" className="bg-forest-50 border border-forest-200 text-forest-900 text-xs px-4 py-3 rounded-xl">
+                  {consultaExito}
+                </div>
+              )}
+              {consultaError && (
+                <div role="alert" className="bg-red-50 border border-red-200 text-red-800 text-xs px-4 py-3 rounded-xl flex items-center justify-between gap-2">
+                  <span>{consultaError}</span>
+                  {!hasSession() && (
+                    <Link to="/login" className="font-semibold underline shrink-0">
+                      Iniciar sesión
+                    </Link>
+                  )}
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-gray-700 block mb-1.5">Nombre completo</label>
                   <input 
                     type="text" 
                     name="nombre"
+                    value={consultaForm.nombre}
+                    onChange={(e) => setConsultaForm((f) => ({ ...f, nombre: e.target.value }))}
                     placeholder="Ej: Camila Rojas" 
                     className="w-full text-sm border border-sand-200 rounded-xl p-3 focus:outline-none focus:border-forest-800 bg-sand-50/30" 
                   />
@@ -454,6 +564,8 @@ export default function Home() {
                   <input 
                     type="tel" 
                     name="telefono"
+                    value={consultaForm.telefono}
+                    onChange={(e) => setConsultaForm((f) => ({ ...f, telefono: e.target.value }))}
                     placeholder="+56 9 1234 5678" 
                     className="w-full text-sm border border-sand-200 rounded-xl p-3 focus:outline-none focus:border-forest-800 bg-sand-50/30" 
                   />
@@ -465,6 +577,8 @@ export default function Home() {
                   <label className="text-xs font-semibold text-gray-700 block mb-1.5">Espacio de interés</label>
                   <select 
                     name="espacio"
+                    value={consultaForm.espacio}
+                    onChange={(e) => setConsultaForm((f) => ({ ...f, espacio: e.target.value }))}
                     className="w-full text-sm border border-sand-200 rounded-xl p-3 bg-white focus:outline-none focus:border-forest-800 text-gray-700"
                   >
                     <option value="">
@@ -482,6 +596,8 @@ export default function Home() {
                   <input 
                     type="date" 
                     name="fecha"
+                    value={consultaForm.fecha}
+                    onChange={(e) => setConsultaForm((f) => ({ ...f, fecha: e.target.value }))}
                     className="w-full text-sm border border-sand-200 rounded-xl p-3 focus:outline-none focus:border-forest-800 bg-sand-50/30 text-gray-700" 
                   />
                 </div>
@@ -492,6 +608,9 @@ export default function Home() {
                 <textarea 
                   rows="4" 
                   name="mensaje"
+                  required
+                  value={consultaForm.mensaje}
+                  onChange={(e) => setConsultaForm((f) => ({ ...f, mensaje: e.target.value }))}
                   placeholder="Detállanos cantidad de asistentes, tipo de celebración o cualquier duda adicional..." 
                   className="w-full text-sm border border-sand-200 rounded-xl p-3 focus:outline-none focus:border-forest-800 bg-sand-50/30"
                 ></textarea>
@@ -499,9 +618,10 @@ export default function Home() {
 
               <button 
                 type="submit" 
-                className="w-full bg-forest-800 text-white font-medium text-sm py-3.5 rounded-xl hover:bg-forest-900 transition-all shadow-sm"
+                disabled={enviandoConsulta}
+                className="w-full bg-forest-800 text-white font-medium text-sm py-3.5 rounded-xl hover:bg-forest-900 disabled:opacity-50 transition-all shadow-sm"
               >
-                Enviar consulta
+                {enviandoConsulta ? 'Enviando consulta...' : 'Enviar consulta'}
               </button>
             </form>
           </div>

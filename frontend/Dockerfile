@@ -39,6 +39,10 @@ RUN echo 'server { \
         proxy_pass http://backend:8000/static/; \
         proxy_set_header Host $host; \
     } \
+    location /media/ { \
+        proxy_pass http://backend:8000/media/; \
+        proxy_set_header Host $host; \
+    } \
 }' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

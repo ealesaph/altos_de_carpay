@@ -11,6 +11,7 @@ import PaymentAuth from './pages/PaymentAuth.jsx';
 import Confirmation from './pages/Confirmation.jsx';
 import ClientReservations from './pages/ClientReservations.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
+import Account from './pages/Account.jsx';
 
 export default function App() {
   return (
@@ -30,8 +31,9 @@ export default function App() {
         <Route path="/simulador/autorizacion" element={<PaymentAuth />} />
         <Route path="/reservar/confirmacion" element={<Confirmation />} />
 
-        {/* Cliente: Mis Reservas */}
+        {/* Cliente: Mis Reservas y Cuenta */}
         <Route path="/mis-reservas" element={<ClientReservations />} />
+        <Route path="/mi-cuenta" element={<Account />} />
 
         {/* Rol Administrativo */}
         <Route path="/admin" element={<AdminDashboard />} />

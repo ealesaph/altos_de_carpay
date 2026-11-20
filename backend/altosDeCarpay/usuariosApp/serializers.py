@@ -80,21 +80,71 @@ class PerfilSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
         fields = ["id_usuario", "correo", "rut", "nombre", "apellido_paterno", "apellido_materno",
-                  "telefono", "rol", "estado", "ultima_conexion"]
-        read_only_fields = ["id_usuario", "correo", "rut", "rol", "estado", "ultima_conexion"]
+                  "telefono", "rol", "estado", "is_superuser", "ultima_conexion"]
+        read_only_fields = ["id_usuario", "correo", "rut", "rol", "estado", "is_superuser", "ultima_conexion"]
+
+
+class CrearPersonalAdminSerializer(serializers.ModelSerializer):
+    correo = serializers.EmailField(
+        max_length=100,
+        validators=[UniqueValidator(queryset=Usuario.objects.all(), lookup="iexact",
+                                    message="Ya existe una cuenta con este correo.")],
+    )
+    rut = RutField(
+        max_length=15,
+        validators=[UniqueValidator(queryset=Usuario.objects.all(),
+                                    message="Ya existe una cuenta con este RUT.")],
+    )
+    password = serializers.CharField(write_only=True, max_length=128, trim_whitespace=False,
+                                     style={"input_type": "password"})
+
+    class Meta:
+        model = Usuario
+        fields = ["correo", "rut", "nombre", "apellido_paterno", "apellido_materno", "telefono", "password"]
+
+    def validate(self, datos):
+        usuario_tmp = Usuario(correo=datos.get("correo", ""), nombre=datos.get("nombre", ""),
+                              apellido_paterno=datos.get("apellido_paterno", ""))
+        try:
+            _validar_clave(datos["password"], usuario_tmp)
+        except serializers.ValidationError as error:
+            raise serializers.ValidationError({"password": error.detail})
+        return datos
+
+    def create(self, datos):
+        clave = datos.pop("password")
+        return Usuario.objects.create_user(
+            password=clave,
+            rol=Usuario.Rol.ADMIN,
+            is_superuser=False,
+            consentimiento_datos=timezone.now(),
+            **datos,
+        )
 
 
 class UsuarioAdminSerializer(PerfilSerializer):
     class Meta(PerfilSerializer.Meta):
         read_only_fields = ["id_usuario", "correo", "rut", "nombre", "apellido_paterno",
-                            "apellido_materno", "telefono", "ultima_conexion"]
+                            "apellido_materno", "telefono", "is_superuser", "ultima_conexion"]
 
     def validate(self, datos):
         solicitante = self.context["request"].user
-        if self.instance and self.instance.pk == solicitante.pk:
-            if datos.get("estado") == Usuario.Estado.INACTIVO or datos.get("rol") == Usuario.Rol.CLIENTE:
+        if self.instance:
+            if self.instance.is_superuser:
+                if datos.get("estado") == Usuario.Estado.INACTIVO or datos.get("rol") == Usuario.Rol.CLIENTE:
+                    raise serializers.ValidationError(
+                        "No se puede desactivar ni quitar el rol al superusuario principal."
+                    )
+            if self.instance.pk == solicitante.pk:
+                if datos.get("estado") == Usuario.Estado.INACTIVO or datos.get("rol") == Usuario.Rol.CLIENTE:
+                    raise serializers.ValidationError(
+                        "No puede desactivarse ni quitarse el rol de administrador a sí mismo."
+                    )
+            if not solicitante.is_superuser and (
+                "rol" in datos or self.instance.es_admin
+            ):
                 raise serializers.ValidationError(
-                    "No puede desactivarse ni quitarse el rol de administrador a sí mismo."
+                    "Solo el superusuario puede asignar o modificar cuentas de personal administrador."
                 )
         return datos
 
@@ -119,6 +169,7 @@ class LoginSerializer(TokenObtainPairSerializer):
         token = super().get_token(usuario)
         token["rol"] = usuario.rol
         token["nombre"] = usuario.nombre
+        token["is_superuser"] = usuario.is_superuser
         return token
 
     def validate(self, atributos):
@@ -130,7 +181,12 @@ class LoginSerializer(TokenObtainPairSerializer):
             seguridad.warning("Intento de acceso fallido desde la IP %s", ip)
             raise
         user_logged_in.send(sender=type(self.user), request=peticion, user=self.user)
-        datos["usuario"] = {"id_usuario": self.user.pk, "nombre": self.user.nombre, "rol": self.user.rol}
+        datos["usuario"] = {
+            "id_usuario": self.user.pk,
+            "nombre": self.user.nombre,
+            "rol": self.user.rol,
+            "is_superuser": self.user.is_superuser,
+        }
         return datos
 
 

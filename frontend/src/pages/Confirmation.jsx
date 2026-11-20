@@ -1,17 +1,37 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Check, Clock } from 'lucide-react';
+import { Check, Clock, Mail } from 'lucide-react';
+import { sendReservationEmail } from '../api';
 
 export default function Confirmation() {
   const location = useLocation();
   const navigate = useNavigate();
   const reserva = location.state;
+  const [emailStatus, setEmailStatus] = useState({ sending: false, message: '', error: '' });
 
   useEffect(() => {
     if (!reserva?.id_reserva) navigate('/mis-reservas', { replace: true });
   }, [reserva, navigate]);
 
   if (!reserva?.id_reserva) return null;
+
+  const handleResendEmail = async () => {
+    setEmailStatus({ sending: true, message: '', error: '' });
+    try {
+      const response = await sendReservationEmail(reserva.id_reserva);
+      setEmailStatus({
+        sending: false,
+        message: response?.detail || `Detalles enviados a ${reserva.correo_cliente}.`,
+        error: '',
+      });
+    } catch (err) {
+      setEmailStatus({
+        sending: false,
+        message: '',
+        error: err.message || 'No se pudo reenviar el correo.',
+      });
+    }
+  };
 
   const saldoPendiente = Number(reserva.saldoPendiente);
   const precioTotal = Number(reserva.monto_total);
@@ -68,6 +88,31 @@ export default function Confirmation() {
               </div>
             )}
           </section>
+        </div>
+
+        <div className="mt-6 bg-white p-5 rounded-2xl border border-sand-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-3 text-sm text-gray-700">
+            <Mail size={18} className="text-forest-800 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-forest-900">
+                Comprobante y detalles enviados a {reserva.correo_cliente}
+              </p>
+              {emailStatus.message && (
+                <p className="text-xs text-forest-800 mt-1">{emailStatus.message}</p>
+              )}
+              {emailStatus.error && (
+                <p className="text-xs text-red-700 mt-1">{emailStatus.error}</p>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleResendEmail}
+            disabled={emailStatus.sending}
+            className="border border-forest-800 text-forest-800 hover:bg-forest-50 disabled:opacity-50 text-sm font-medium px-4 py-2 rounded-full transition-colors shrink-0"
+          >
+            {emailStatus.sending ? 'Enviando...' : 'Reenviar detalles al correo'}
+          </button>
         </div>
 
         <div className="mt-8 flex gap-4">

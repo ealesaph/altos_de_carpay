@@ -1,6 +1,7 @@
 const API_BASE_URL = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/$/, '');
 const ACCESS_TOKEN_KEY = 'altos_de_carpay_access';
 const REFRESH_TOKEN_KEY = 'altos_de_carpay_refresh';
+const USER_KEY = 'altos_de_carpay_user';
 
 function getErrorMessage(data, status) {
   if (data && typeof data === 'object') {
@@ -71,7 +72,58 @@ export async function login(correo, password) {
   });
   localStorage.setItem(ACCESS_TOKEN_KEY, data.access);
   localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh);
+  localStorage.setItem(USER_KEY, JSON.stringify(data.usuario));
   return data.usuario;
+}
+
+export async function getProfile() {
+  const perfil = await apiRequest('/auth/perfil/');
+  localStorage.setItem(
+    USER_KEY,
+    JSON.stringify({
+      id_usuario: perfil.id_usuario,
+      nombre: perfil.nombre,
+      rol: perfil.rol,
+      is_superuser: Boolean(perfil.is_superuser),
+    }),
+  );
+  return perfil;
+}
+
+export async function updateProfile(changes) {
+  const perfil = await apiRequest('/auth/perfil/', {
+    method: 'PATCH',
+    body: JSON.stringify(changes),
+  });
+  localStorage.setItem(
+    USER_KEY,
+    JSON.stringify({
+      id_usuario: perfil.id_usuario,
+      nombre: perfil.nombre,
+      rol: perfil.rol,
+      is_superuser: Boolean(perfil.is_superuser),
+    }),
+  );
+  return perfil;
+}
+
+export async function changePassword(password_actual, password_nueva) {
+  return apiRequest('/auth/cambiar-password/', {
+    method: 'POST',
+    body: JSON.stringify({ password_actual, password_nueva }),
+  });
+}
+
+export async function deactivateAccount() {
+  const refresh = localStorage.getItem(REFRESH_TOKEN_KEY);
+  try {
+    return await apiRequest('/auth/desactivar-cuenta/', {
+      method: 'POST',
+      body: JSON.stringify(refresh ? { refresh } : {}),
+    });
+  } finally {
+    clearSession();
+  }
 }
 
 export async function registerCustomer(form) {
@@ -88,6 +140,48 @@ export async function getSectors() {
 
 export async function updateSector(id, changes) {
   return apiRequest(`/sectores/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(changes),
+  });
+}
+
+export async function uploadSectorImage(id, file) {
+  const formData = new FormData();
+  formData.append('imagen', file);
+  let response = await fetch(`${API_BASE_URL}/sectores/${id}/subir-imagen/`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_KEY) || ''}` },
+    body: formData,
+  });
+  if (response.status === 401) {
+    const newAccessToken = await refreshAccessToken();
+    if (newAccessToken) {
+      response = await fetch(`${API_BASE_URL}/sectores/${id}/subir-imagen/`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${newAccessToken}` },
+        body: formData,
+      });
+    }
+  }
+  const data = parseResponse(await response.text());
+  if (!response.ok) throw new Error(getErrorMessage(data, response.status));
+  return data;
+}
+
+export async function getUsers() {
+  const data = await apiRequest('/usuarios/');
+  return Array.isArray(data) ? data : data.results;
+}
+
+export async function createStaffAdmin(form) {
+  return apiRequest('/usuarios/', {
+    method: 'POST',
+    body: JSON.stringify(form),
+  });
+}
+
+export async function updateUser(id, changes) {
+  return apiRequest(`/usuarios/${id}/`, {
     method: 'PATCH',
     body: JSON.stringify(changes),
   });
@@ -120,9 +214,27 @@ export async function cancelReservation(id) {
   return apiRequest(`/reservas/${id}/cancelar/`, { method: 'POST' });
 }
 
+export async function changeReservationStatus(id, estado) {
+  return apiRequest(`/reservas/${id}/estado/`, {
+    method: 'POST',
+    body: JSON.stringify({ estado }),
+  });
+}
+
+export async function sendReservationEmail(id) {
+  return apiRequest(`/reservas/${id}/enviar-correo/`, { method: 'POST' });
+}
+
 export async function getConsultas() {
   const data = await apiRequest('/consultas/');
   return Array.isArray(data) ? data : data.results;
+}
+
+export async function createConsulta(form) {
+  return apiRequest('/consultas/', {
+    method: 'POST',
+    body: JSON.stringify(form),
+  });
 }
 
 export async function replyConsulta(id, respuesta) {
@@ -171,8 +283,27 @@ export async function logout() {
 export function clearSession() {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
 }
 
 export function hasSession() {
   return Boolean(localStorage.getItem(ACCESS_TOKEN_KEY));
+}
+
+export function getSessionUser() {
+  if (!hasSession()) return null;
+  try {
+    const saved = localStorage.getItem(USER_KEY);
+    if (saved) return JSON.parse(saved);
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return {
+      id_usuario: payload.user_id,
+      nombre: payload.nombre,
+      rol: payload.rol,
+      is_superuser: Boolean(payload.is_superuser),
+    };
+  } catch {
+    return null;
+  }
 }

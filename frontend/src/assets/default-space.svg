@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Altos de Carpay - Hojas naturales">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#edf5ef" />
+      <stop offset="100%" stop-color="#dcebe0" />
+    </linearGradient>
+    <linearGradient id="leafMain" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2d6a4f" />
+      <stop offset="100%" stop-color="#1b4332" />
+    </linearGradient>
+    <linearGradient id="leafLight" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#40916c" />
+      <stop offset="100%" stop-color="#74c69d" />
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="500" fill="url(#bg)" />
+
+  <!-- Círculos suaves decorativos -->
+  <circle cx="400" cy="240" r="165" fill="#cfe5d5" opacity="0.55" />
+  <circle cx="400" cy="240" r="115" fill="#b7e4c7" opacity="0.35" />
+
+  <!-- Rama central -->
+  <path d="M315 365 C355 290, 415 210, 505 135" fill="none" stroke="#1b4332" stroke-width="5" stroke-linecap="round" />
+
+  <!-- Hoja principal grande -->
+  <path d="M385 265 C365 180, 435 110, 520 115 C515 205, 455 265, 385 265 Z" fill="url(#leafMain)" />
+  <path d="M390 260 C430 210, 470 165, 512 122" fill="none" stroke="#95d5b2" stroke-width="2.5" stroke-linecap="round" opacity="0.8" />
+
+  <!-- Hoja izquierda -->
+  <path d="M362 290 C285 280, 245 220, 265 160 C335 170, 375 225, 362 290 Z" fill="url(#leafLight)" />
+  <path d="M358 286 C322 245, 295 208, 270 166" fill="none" stroke="#d8f3dc" stroke-width="2" stroke-linecap="round" opacity="0.85" />
+
+  <!-- Hoja inferior derecha -->
+  <path d="M372 315 C430 330, 495 300, 515 245 C455 235, 395 265, 372 315 Z" fill="#52b788" opacity="0.9" />
+  <path d="M378 312 C425 292, 465 272, 506 248" fill="none" stroke="#d8f3dc" stroke-width="2" stroke-linecap="round" opacity="0.85" />
+
+  <!-- Hoja pequeña superior izquierda -->
+  <path d="M405 225 C365 190, 355 135, 385 95 C425 125, 430 180, 405 225 Z" fill="#40916c" opacity="0.85" />
+
+  <!-- Texto sutil -->
+  <text x="400" y="425" text-anchor="middle" font-family="Georgia, serif" font-size="22" font-weight="600" fill="#1b4332" letter-spacing="1">
+    Altos de Carpay
+  </text>
+</svg>

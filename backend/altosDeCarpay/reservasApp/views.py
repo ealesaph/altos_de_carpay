@@ -1,10 +1,15 @@
 import csv
+import os
+import uuid
 from decimal import Decimal
+from django.conf import settings
+from django.core.files.storage import default_storage
 from django.db.models import DecimalField, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from altosDeCarpayApp.permissions import EsAdministrador
@@ -41,6 +46,41 @@ class SectorViewSet(CatalogoViewSet):
         if not (usuario.is_authenticated and usuario.es_admin):
             consulta = consulta.exclude(estado=Sector.Estado.INACTIVO)
         return consulta
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="subir-imagen",
+        permission_classes=[EsAdministrador],
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def subir_imagen(self, request, pk=None):
+        sector = self.get_object()
+        archivo = request.FILES.get("imagen")
+        if not archivo:
+            return Response({"detail": "Adjunte un archivo en el campo 'imagen'."}, status=status.HTTP_400_BAD_REQUEST)
+        tipos_permitidos = {
+            "image/jpeg": ".jpg",
+            "image/png": ".png",
+            "image/webp": ".webp",
+        }
+        extension = tipos_permitidos.get(archivo.content_type)
+        if not extension:
+            return Response(
+                {"detail": "Formato no permitido. Use JPG, PNG o WEBP."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if archivo.size > 5 * 1024 * 1024:
+            return Response(
+                {"detail": "La imagen no puede superar los 5 MB."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        nombre_archivo = os.path.join("sectores", f"sector_{sector.pk}_{uuid.uuid4().hex[:10]}{extension}")
+        ruta_guardada = default_storage.save(nombre_archivo, archivo)
+        url_publica = f"{settings.MEDIA_URL}{ruta_guardada.replace(os.sep, '/')}"
+        sector.fotografias = [url_publica]
+        sector.save(update_fields=["fotografias"])
+        return Response(self.get_serializer(sector).data, status=status.HTTP_200_OK)
 
 class ServicioViewSet(CatalogoViewSet):
     serializer_class = ServicioSerializer
@@ -133,6 +173,18 @@ class ReservaViewSet(
             validado_por=request.user,
         )
         return Response(ValidacionAccesoSerializer(validacion).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"], url_path="enviar-correo")
+    def enviar_correo(self, request, pk=None):
+        reserva = self.get_object()
+        try:
+            services.enviar_correo_reserva(reserva.pk, motivo="detalle", fail_silently=False)
+        except Exception:
+            return Response(
+                {"detail": "No se pudo enviar el correo en este momento. Verifica la configuración SMTP."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response({"detail": f"Correo con los detalles de la reserva enviado a {reserva.usuario.correo}."})
 
     @action(detail=False, methods=["get"], url_path="exportar", permission_classes=[EsAdministrador])
     def exportar(self, request):
