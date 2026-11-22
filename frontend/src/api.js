@@ -138,6 +138,11 @@ export async function getSectors() {
   return Array.isArray(data) ? data : data.results;
 }
 
+export async function getServices() {
+  const data = await apiRequest('/servicios/');
+  return Array.isArray(data) ? data : data.results;
+}
+
 export async function updateSector(id, changes) {
   return apiRequest(`/sectores/${id}/`, {
     method: 'PATCH',

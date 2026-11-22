@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Check, ArrowRight, XCircle, CheckCircle } from 'lucide-react';
 import { createPayment, getReservation } from '../api.js';
+import defaultSpaceImg from '../assets/default-space.svg';
 
 export default function PaymentAuth() {
   const navigate = useNavigate();
@@ -211,7 +212,11 @@ export default function PaymentAuth() {
           <div className="lg:col-span-5 bg-white p-6 md:p-8 rounded-3xl border border-sand-200/80 shadow-sm space-y-6">
             <div className="rounded-2xl overflow-hidden h-36 w-full bg-sand-100 border border-sand-200">
               <img 
-                src={datosReserva.img} 
+                src={datosReserva.img || defaultSpaceImg}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = defaultSpaceImg;
+                }}
                 alt={datosReserva.nombreEspacio} 
                 className="w-full h-full object-cover block"
               />
@@ -222,7 +227,7 @@ export default function PaymentAuth() {
                 Reserva N° {datosReserva.id_reserva}
               </h3>
               <p className="text-xs text-gray-700 font-medium mt-0.5">{datosReserva.nombreEspacio}</p>
-              <p className="text-xs text-gray-500">{datosReserva.fecha} · {datosReserva.hora_inicio} · {datosReserva.horas_reservadas} horas</p>
+              <p className="text-xs text-gray-500">{datosReserva.fecha} · {String(datosReserva.hora_inicio || '').slice(0, 5)} · {datosReserva.horas_reservadas} horas</p>
             </div>
 
             <div className="bg-sand-50 p-4 rounded-2xl border border-sand-200/80">

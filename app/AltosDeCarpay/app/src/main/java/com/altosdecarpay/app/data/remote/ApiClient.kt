@@ -12,8 +12,8 @@ import java.util.concurrent.TimeUnit
 object ApiClient {
 
     // Emulador Android: 10.0.2.2 apunta al localhost de la máquina host.
-    // Dispositivo físico en la misma red: usar la IP local del servidor (ej. 192.168.1.X:8000).
-    const val DEFAULT_BASE_URL = "http://192.168.1.85:8000/api/v1/"
+    // Dispositivo físico en la misma red: usar la IP local del servidor (ej. 192.168.8.100:8000).
+    const val DEFAULT_BASE_URL = "http://10.0.2.2:8000/api/v1/"
     private const val PREF_KEY_BASE_URL = "custom_base_url"
 
     private var retrofit: Retrofit? = null

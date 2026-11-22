@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
@@ -25,6 +25,7 @@ export default function App() {
         <Route path="/registro" element={<Register />} />
 
         {/* Flujo de Reserva */}
+        <Route path="/reservar" element={<Navigate to="/reservar/espacio" replace />} />
         <Route path="/reservar/espacio" element={<SelectDateSpace />} />
         <Route path="/reservar/pago" element={<CheckoutReview />} />
         <Route path="/simulador/tarjeta" element={<PaymentCard />} />
@@ -37,6 +38,9 @@ export default function App() {
 
         {/* Rol Administrativo */}
         <Route path="/admin" element={<AdminDashboard />} />
+
+        {/* Fallback a Home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

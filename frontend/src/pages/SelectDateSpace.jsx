@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Calendar as CalendarIcon, Clock, ArrowRight } from 'lucide-react';
-import { createReservation, getSectors, hasSession } from '../api.js';
+import { createReservation, getSectors, getServices, hasSession } from '../api.js';
+import defaultSpaceImg from '../assets/default-space.svg';
 
 function fechaMinima() {
   const fecha = new Date();
@@ -16,6 +17,8 @@ function fechaMinima() {
 export default function SelectDateSpace() {
   const navigate = useNavigate();
   const [sectores, setSectores] = useState([]);
+  const [servicios, setServicios] = useState([]);
+  const [serviciosSeleccionados, setServiciosSeleccionados] = useState({});
   const [sectorSeleccionado, setSectorSeleccionado] = useState('');
   const [fecha, setFecha] = useState(fechaMinima);
   const [horaInicio, setHoraInicio] = useState('13:00');
@@ -26,10 +29,11 @@ export default function SelectDateSpace() {
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
-    getSectors()
-      .then((catalogo) => {
+    Promise.all([getSectors(), getServices().catch(() => [])])
+      .then(([catalogo, listaServicios]) => {
         const disponibles = catalogo.filter((sector) => sector.estado === 'Disponible');
         setSectores(disponibles);
+        setServicios((listaServicios || []).filter((s) => s.estado === 'Activo'));
         if (disponibles.length) setSectorSeleccionado(String(disponibles[0].id_sector));
       })
       .catch((requestError) => setError(requestError.message))
@@ -39,7 +43,19 @@ export default function SelectDateSpace() {
   const sectorActual = sectores.find(
     (sector) => String(sector.id_sector) === sectorSeleccionado,
   );
-  const precioTotal = sectorActual ? Number(sectorActual.valor_hora) * Number(horas) : 0;
+  const precioArriendo = sectorActual ? Number(sectorActual.valor_hora) * Number(horas) : 0;
+  const precioExtras = servicios.reduce((acc, srv) => {
+    const cant = Number(serviciosSeleccionados[srv.id_servicio] || 0);
+    return acc + (cant > 0 ? Number(srv.valor) * cant : 0);
+  }, 0);
+  const precioTotal = precioArriendo + precioExtras;
+
+  const toggleServicio = (idServicio) => {
+    setServiciosSeleccionados((prev) => {
+      const actual = Number(prev[idServicio] || 0);
+      return { ...prev, [idServicio]: actual > 0 ? 0 : 1 };
+    });
+  };
 
   const handleContinuar = async (event) => {
     event.preventDefault();
@@ -64,11 +80,15 @@ export default function SelectDateSpace() {
 
     setEnviando(true);
     try {
+      const serviciosPayload = Object.entries(serviciosSeleccionados)
+        .filter(([, cant]) => Number(cant) > 0)
+        .map(([idSrv, cant]) => ({ servicio: Number(idSrv), cantidad: Number(cant) }));
+
       const reserva = await createReservation({
         fecha,
         hora_inicio: horaInicio,
         sectores: [{ sector: sectorActual.id_sector, horas: Number(horas) }],
-        servicios: [],
+        servicios: serviciosPayload,
         acepta_condiciones: aceptaCondiciones,
       });
       navigate('/reservar/pago', {
@@ -77,8 +97,10 @@ export default function SelectDateSpace() {
           id_reserva: reserva.id_reserva,
           nombreEspacio: sectorActual.nombre,
           precioTotal: Number(reserva.monto_total),
+          precioArriendo,
+          precioExtras,
           anticipo: Number(reserva.monto_anticipo),
-          img: sectorActual.fotografias?.[0] || '',
+          img: sectorActual.fotografias?.[0] || defaultSpaceImg,
           bloque: `${reserva.hora_inicio} · ${reserva.horas_reservadas} horas`,
           tipoPago: 'Anticipo',
         },
@@ -197,6 +219,45 @@ export default function SelectDateSpace() {
                 />
               </div>
             </div>
+            {servicios.length > 0 && (
+              <div className="pt-2 border-t border-sand-100">
+                <h2 className="font-serif text-lg font-semibold text-forest-900 mb-3">
+                  Servicios adicionales (opcional)
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {servicios.map((srv) => {
+                    const activo = Number(serviciosSeleccionados[srv.id_servicio] || 0) > 0;
+                    return (
+                      <label
+                        key={srv.id_servicio}
+                        className={`flex items-start justify-between gap-2 p-3 rounded-xl border cursor-pointer text-xs ${
+                          activo ? 'border-forest-800 bg-forest-50/40' : 'border-sand-200'
+                        }`}
+                      >
+                        <span className="flex items-start gap-2">
+                          <input
+                            type="checkbox"
+                            checked={activo}
+                            onChange={() => toggleServicio(srv.id_servicio)}
+                            className="mt-0.5"
+                          />
+                          <span>
+                            <span className="block font-semibold text-forest-900">{srv.nombre}</span>
+                            {srv.descripcion && (
+                              <span className="block text-[11px] text-gray-500">{srv.descripcion}</span>
+                            )}
+                          </span>
+                        </span>
+                        <span className="font-semibold text-forest-900 whitespace-nowrap">
+                          +${Number(srv.valor).toLocaleString('es-CL')}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <label className="flex items-start gap-2 text-sm text-gray-600">
               <input
                 type="checkbox"
