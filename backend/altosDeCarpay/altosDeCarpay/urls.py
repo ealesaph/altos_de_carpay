@@ -23,5 +23,6 @@ urlpatterns = [
     path('api/v1/', include('usuariosApp.urls')),
     path('api/v1/', include('reservasApp.urls')),
     path('api/v1/', include('consultasApp.urls')),
+    path('api/v1/', include('accesosApp.urls')),
     path('api/v1/', include('auditoriaApp.urls')), 
 ]

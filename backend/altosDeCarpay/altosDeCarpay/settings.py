@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'usuariosApp.apps.UsuariosAppConfig',
     'reservasApp',
     'consultasApp',
+    'accesosApp',
     'auditoriaApp.apps.AuditoriaAppConfig',
 ]
 
@@ -164,6 +165,7 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,
+    'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_FIELD': 'id_usuario',
