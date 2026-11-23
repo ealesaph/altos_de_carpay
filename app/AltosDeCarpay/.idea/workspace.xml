@@ -10,7 +10,57 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="27f37140-4fed-45e5-8c83-01dfd59c4c02" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../../.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/../../.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/checksums/checksums.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/checksums/checksums.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/checksums/md5-checksums.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/checksums/md5-checksums.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/checksums/sha1-checksums.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/checksums/sha1-checksums.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/executionHistory/executionHistory.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/executionHistory/executionHistory.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/fileHashes.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/fileHashes.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.6.0/fileHashes/resourceHashesCache.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/outputFiles.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/outputFiles.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/deploymentTargetSelector.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deploymentTargetSelector.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/androidTest/java/com/altosdecarpay/app/ui/screens/admin/AdminDashboardScreenTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/androidTest/java/com/altosdecarpay/app/ui/screens/admin/AdminDashboardScreenTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/androidTest/java/com/altosdecarpay/app/ui/screens/admin/AdminReservaDetailScreenTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/androidTest/java/com/altosdecarpay/app/ui/screens/admin/AdminReservaDetailScreenTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/androidTest/java/com/altosdecarpay/app/ui/screens/user/UserReservationsScreenTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/androidTest/java/com/altosdecarpay/app/ui/screens/user/UserReservationsScreenTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/MainActivity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/data/model/AuditoriaModels.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/data/model/AuditoriaModels.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/data/model/AuthModels.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/data/model/AuthModels.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/data/remote/ApiService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/data/remote/ApiService.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/LoginScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/LoginScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/RegisterScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/RegisterScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/admin/AdminBitacoraScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/admin/AdminBitacoraScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/admin/AdminDashboardScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/admin/AdminDashboardScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/admin/AdminReservaDetailScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/admin/AdminReservaDetailScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/user/UserReservationsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/screens/user/UserReservationsScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/viewmodel/ServiciosViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/altosdecarpay/app/ui/viewmodel/ServiciosViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/altosDeCarpay/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/altosDeCarpay/settings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/auditoriaApp/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/auditoriaApp/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/auditoriaApp/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/auditoriaApp/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/entrypoint.sh" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/entrypoint.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/serializers.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/serializers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/reservasApp/views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/seed_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/seed_data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/usuariosApp/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/usuariosApp/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/usuariosApp/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/usuariosApp/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/usuariosApp/serializers.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/usuariosApp/serializers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/usuariosApp/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/usuariosApp/urls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../backend/altosDeCarpay/usuariosApp/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../backend/altosDeCarpay/usuariosApp/views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/../../docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../../frontend/src/App.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../frontend/src/api.js" beforeDir="false" afterPath="$PROJECT_DIR$/../../frontend/src/api.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../frontend/src/pages/Account.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../../frontend/src/pages/Account.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../frontend/src/pages/AdminDashboard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../../frontend/src/pages/AdminDashboard.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../frontend/src/pages/Login.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../../frontend/src/pages/Login.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../frontend/src/pages/Register.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../../frontend/src/pages/Register.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -57,25 +107,27 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Android App.app.executor&quot;: &quot;Run&quot;,
-    &quot;CidrDebugProfileConversion&quot;: &quot;true&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
-    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;dev__app&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/altos_de_carpay/app/AltosDeCarpay&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.google.gct.login2.settings.GoogleLoginApplicationSettingsConfigurableProvider&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Android App.app.executor": "Run",
+    "Android Instrumented Tests.Tests in 'com.altosdecarpay.app'.executor": "Run",
+    "CidrDebugProfileConversion": "true",
+    "Gradle.Tests in 'com.altosdecarpay.app'.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/altos_de_carpay/app/AltosDeCarpay",
+    "settings.editor.selected.configurable": "com.google.gct.login2.settings.GoogleLoginApplicationSettingsConfigurableProvider"
   }
-}</component>
-  <component name="RunManager">
+}]]></component>
+  <component name="RunManager" selected="Android App.app">
     <configuration name="app" type="AndroidRunConfigurationType" factoryName="Android App" activateToolWindowBeforeRun="false">
       <module name="AltosDeCarpay.app" />
       <option name="ANDROID_RUN_CONFIGURATION_SCHEMA_VERSION" value="1" />
@@ -142,6 +194,92 @@
         <option name="Android.Gradle.BeforeRunTask" enabled="true" />
       </method>
     </configuration>
+    <configuration name="Tests in 'com.altosdecarpay.app'" type="AndroidTestRunConfigurationType" factoryName="Android Instrumented Tests" temporary="true" nameIsGenerated="true">
+      <module name="AltosDeCarpay.app" />
+      <option name="ANDROID_TEST_RUN_CONFIGURATION_SCHEMA_VERSION" value="1" />
+      <option name="TESTING_TYPE" value="1" />
+      <option name="METHOD_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="PACKAGE_NAME" value="com.altosdecarpay.app" />
+      <option name="TEST_NAME_REGEX" value="" />
+      <option name="INSTRUMENTATION_RUNNER_CLASS" value="" />
+      <option name="EXTRA_OPTIONS" value="" />
+      <option name="CLEAR_LOGCAT" value="false" />
+      <option name="SHOW_LOGCAT_AUTOMATICALLY" value="false" />
+      <option name="TARGET_SELECTION_MODE" value="DEVICE_AND_SNAPSHOT_COMBO_BOX" />
+      <option name="DEBUGGER_TYPE" value="Auto" />
+      <Auto>
+        <option name="USE_JAVA_AWARE_DEBUGGER" value="false" />
+        <option name="SHOW_STATIC_VARS" value="true" />
+        <option name="WORKING_DIR" value="" />
+        <option name="TARGET_LOGGING_CHANNELS" value="lldb process:gdb-remote packets" />
+        <option name="SHOW_OPTIMIZED_WARNING" value="true" />
+        <option name="ATTACH_ON_WAIT_FOR_DEBUGGER" value="false" />
+      </Auto>
+      <Hybrid>
+        <option name="USE_JAVA_AWARE_DEBUGGER" value="false" />
+        <option name="SHOW_STATIC_VARS" value="true" />
+        <option name="WORKING_DIR" value="" />
+        <option name="TARGET_LOGGING_CHANNELS" value="lldb process:gdb-remote packets" />
+        <option name="SHOW_OPTIMIZED_WARNING" value="true" />
+        <option name="ATTACH_ON_WAIT_FOR_DEBUGGER" value="false" />
+      </Hybrid>
+      <Java>
+        <option name="ATTACH_ON_WAIT_FOR_DEBUGGER" value="false" />
+      </Java>
+      <Native>
+        <option name="USE_JAVA_AWARE_DEBUGGER" value="false" />
+        <option name="SHOW_STATIC_VARS" value="true" />
+        <option name="WORKING_DIR" value="" />
+        <option name="TARGET_LOGGING_CHANNELS" value="lldb process:gdb-remote packets" />
+        <option name="SHOW_OPTIMIZED_WARNING" value="true" />
+        <option name="ATTACH_ON_WAIT_FOR_DEBUGGER" value="false" />
+      </Native>
+      <Profilers>
+        <option name="ADVANCED_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_CPU_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_CPU_PROFILING_CONFIGURATION_NAME" value="Java/Kotlin Method Trace" />
+        <option name="STARTUP_NATIVE_MEMORY_PROFILING_ENABLED" value="false" />
+        <option name="NATIVE_MEMORY_SAMPLE_RATE_BYTES" value="2048" />
+      </Profilers>
+      <method v="2">
+        <option name="Android.Gradle.BeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Tests in 'com.altosdecarpay.app'" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" value="" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value=":app:testDebugUnitTest" />
+            <option value="--tests" />
+            <option value="&quot;com.altosdecarpay.app.*&quot;" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <ExternalSystemDebugDisabled>false</ExternalSystemDebugDisabled>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>true</RunAsTest>
+      <GradleProfilingDisabled>false</GradleProfilingDisabled>
+      <GradleCoverageDisabled>false</GradleCoverageDisabled>
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Gradle.Tests in 'com.altosdecarpay.app'" />
+        <item itemvalue="Android Instrumented Tests.Tests in 'com.altosdecarpay.app'" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
