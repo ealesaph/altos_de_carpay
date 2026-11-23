@@ -128,12 +128,18 @@ export default function AdminDashboard() {
       .finally(() => setCargando(false));
   }, [navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const cambiarSeccion = (nuevaSeccion) => {
+    setSeccionActiva(nuevaSeccion);
+    setMensajeExito('');
+    setError('');
+  };
+
   const seleccionarSectorParaEditar = (sector) => {
     setSectorEditandoId(sector.id_sector);
     setSectorForm({
       nombre: sector.nombre || '',
       descripcion: sector.descripcion || '',
-      valor_hora: sector.valor_hora ?? '',
+      valor_hora: sector.valor_hora != null ? Math.round(Number(sector.valor_hora)) : '',
       estado: sector.estado || 'Disponible',
       imagenUrl: sector.fotografias?.[0] || '',
     });
@@ -342,7 +348,7 @@ export default function AdminDashboard() {
           <nav className="space-y-1 text-xs">
             <button
               type="button"
-              onClick={() => setSeccionActiva('dashboard')}
+              onClick={() => cambiarSeccion('dashboard')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
                 seccionActiva === 'dashboard' ? 'bg-forest-800 text-white font-semibold' : 'text-gray-300 hover:bg-forest-800/50'
               }`}
@@ -353,7 +359,7 @@ export default function AdminDashboard() {
 
             <button
               type="button"
-              onClick={() => setSeccionActiva('reservas')}
+              onClick={() => cambiarSeccion('reservas')}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors ${
                 seccionActiva === 'reservas' ? 'bg-forest-800 text-white font-semibold' : 'text-gray-300 hover:bg-forest-800/50'
               }`}
@@ -367,7 +373,7 @@ export default function AdminDashboard() {
 
             <button
               type="button"
-              onClick={() => setSeccionActiva('catalogo')}
+              onClick={() => cambiarSeccion('catalogo')}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors ${
                 seccionActiva === 'catalogo' ? 'bg-forest-800 text-white font-semibold' : 'text-gray-300 hover:bg-forest-800/50'
               }`}
@@ -381,7 +387,7 @@ export default function AdminDashboard() {
 
             <button
               type="button"
-              onClick={() => setSeccionActiva('consultas')}
+              onClick={() => cambiarSeccion('consultas')}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors ${
                 seccionActiva === 'consultas' ? 'bg-forest-800 text-white font-semibold' : 'text-gray-300 hover:bg-forest-800/50'
               }`}
@@ -399,7 +405,7 @@ export default function AdminDashboard() {
 
             <button
               type="button"
-              onClick={() => setSeccionActiva('usuarios')}
+              onClick={() => cambiarSeccion('usuarios')}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors ${
                 seccionActiva === 'usuarios' ? 'bg-forest-800 text-white font-semibold' : 'text-gray-300 hover:bg-forest-800/50'
               }`}
@@ -435,10 +441,18 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-4 text-xs">
+            <Link
+              to="/"
+              className="md:hidden text-gray-500 hover:text-forest-900 inline-flex items-center gap-1"
+              title="Ver sitio público"
+            >
+              <ExternalLink size={14} />
+              <span className="hidden sm:inline">Sitio público</span>
+            </Link>
             <button
               type="button"
               onClick={() => {
-                setSeccionActiva('consultas');
+                cambiarSeccion('consultas');
                 setFiltroConsulta('Pendiente');
               }}
               title="Ver consultas pendientes"
@@ -459,6 +473,14 @@ export default function AdminDashboard() {
               </span>
               <span className="font-medium text-gray-700 hover:text-forest-900">Mi cuenta</span>
             </Link>
+            <button
+              type="button"
+              onClick={cerrarSesion}
+              title="Cerrar sesión"
+              className="md:hidden text-gray-500 hover:text-red-700 inline-flex items-center gap-1 border-l border-sand-200 pl-3"
+            >
+              <LogOut size={15} />
+            </button>
           </div>
         </header>
 
@@ -475,7 +497,7 @@ export default function AdminDashboard() {
               <button
                 key={id}
                 type="button"
-                onClick={() => setSeccionActiva(id)}
+                onClick={() => cambiarSeccion(id)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium border ${
                   seccionActiva === id
                     ? 'bg-forest-900 text-white border-forest-900'
@@ -548,7 +570,7 @@ export default function AdminDashboard() {
               <button
                 type="button"
                 onClick={() => {
-                  setSeccionActiva('consultas');
+                  cambiarSeccion('consultas');
                   setFiltroConsulta('Pendiente');
                 }}
                 className="text-left bg-white p-5 rounded-2xl border border-sand-200/80 shadow-sm hover:border-forest-700 hover:shadow-md transition-all"
@@ -556,7 +578,9 @@ export default function AdminDashboard() {
                 <span className="text-3xl font-serif font-bold text-forest-900 block">
                   {consultasPendientesCount}
                 </span>
-                <span className="text-xs font-semibold text-gray-700 mt-1 block">Consultas pendientes</span>
+                <span className="text-xs font-semibold text-gray-700 mt-1 block">
+                  {consultasPendientesCount === 1 ? 'Consulta pendiente' : 'Consultas pendientes'}
+                </span>
                 <span className="text-[10px] text-amber-700">Ir a responder ({consultas.length} totales) →</span>
               </button>
 
@@ -673,7 +697,7 @@ export default function AdminDashboard() {
                             </td>
                             <td className="py-4 px-6 text-gray-600">
                               {reserva.fecha}<br />
-                              {reserva.hora_inicio ? `${reserva.hora_inicio}–${reserva.hora_fin}` : 'Horario no registrado'}
+                              {reserva.hora_inicio ? `${String(reserva.hora_inicio).slice(0, 5)}–${String(reserva.hora_fin || '').slice(0, 5)}` : 'Horario no registrado'}
                             </td>
                             <td className="py-4 px-6 font-medium text-gray-800">
                               ${Number(reserva.monto_total).toLocaleString('es-CL')}
@@ -851,7 +875,7 @@ export default function AdminDashboard() {
                                     <input
                                       type="number"
                                       min="0"
-                                      step="0.01"
+                                      step="1"
                                       required
                                       value={sectorForm.valor_hora}
                                       onChange={(e) => setSectorForm((f) => ({ ...f, valor_hora: e.target.value }))}
@@ -875,11 +899,11 @@ export default function AdminDashboard() {
                                   </label>
                                   <label className="block text-gray-600">
                                     Descripción
-                                    <input
-                                      type="text"
+                                    <textarea
+                                      rows={2}
                                       value={sectorForm.descripcion}
                                       onChange={(e) => setSectorForm((f) => ({ ...f, descripcion: e.target.value }))}
-                                      className="w-full bg-white border border-sand-200 rounded-lg p-2 mt-1"
+                                      className="w-full bg-white border border-sand-200 rounded-lg p-2 mt-1 resize-y"
                                     />
                                   </label>
                                 </div>
@@ -1267,7 +1291,7 @@ export default function AdminDashboard() {
                                     onClick={() =>
                                       manejarActualizarUsuario(u, { rol: u.rol === 'Admin' ? 'Cliente' : 'Admin' })
                                     }
-                                    className="border border-forest-800/40 text-forest-900 hover:bg-forest-50 px-2.5 py-1 rounded-lg font-medium disabled:opacity-50"
+                                    className="border border-forest-800/40 text-forest-900 hover:bg-forest-50 px-2.5 py-1 rounded-lg font-medium disabled:opacity-50 whitespace-nowrap"
                                   >
                                     {u.rol === 'Admin' ? 'Pasar a Cliente' : 'Asignar Personal Admin'}
                                   </button>
@@ -1279,7 +1303,7 @@ export default function AdminDashboard() {
                                         estado: u.estado === 'Activo' ? 'Inactivo' : 'Activo',
                                       })
                                     }
-                                    className="border border-sand-300 text-gray-700 hover:bg-sand-100 px-2.5 py-1 rounded-lg font-medium disabled:opacity-50"
+                                    className="border border-sand-300 text-gray-700 hover:bg-sand-100 px-2.5 py-1 rounded-lg font-medium disabled:opacity-50 whitespace-nowrap"
                                   >
                                     {u.estado === 'Activo' ? 'Desactivar' : 'Activar'}
                                   </button>

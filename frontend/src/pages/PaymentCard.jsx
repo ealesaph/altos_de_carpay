@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { CreditCard, Check, ArrowRight } from 'lucide-react';
+import defaultSpaceImg from '../assets/default-space.svg';
 
 export default function PaymentCard() {
   const navigate = useNavigate();
@@ -38,9 +39,9 @@ export default function PaymentCard() {
           </Link>
 
           <div className="flex items-center gap-6 text-xs text-gray-600 font-medium">
-            <span className="hidden sm:inline">Espacios</span>
-            <span className="hidden sm:inline">Cómo reservar</span>
-            <span className="hidden sm:inline">Contacto</span>
+            <Link to="/#espacios" className="hidden sm:inline hover:text-forest-900">Espacios</Link>
+            <Link to="/#como-funciona" className="hidden sm:inline hover:text-forest-900">Cómo reservar</Link>
+            <Link to="/#contacto" className="hidden sm:inline hover:text-forest-900">Contacto</Link>
             <span className="bg-sand-100 text-forest-900 px-3 py-1.5 rounded-full font-semibold">
               Reserva N° {datosReserva.id_reserva}
             </span>
@@ -237,14 +238,23 @@ export default function PaymentCard() {
               </button>
 
               <div className="text-center pt-2">
-                <Link to="/reservar/pago" state={datosReserva} className="text-xs text-gray-500 hover:text-forest-900">
-                  Cancelar y volver al paso 3
-                </Link>
+                {datosReserva.tipoPago === 'Saldo' ? (
+                  <Link to="/mis-reservas" className="text-xs text-gray-500 hover:text-forest-900">
+                    Cancelar y volver a Mis reservas
+                  </Link>
+                ) : (
+                  <Link to="/reservar/pago" state={datosReserva} className="text-xs text-gray-500 hover:text-forest-900">
+                    Cancelar y volver al paso 3
+                  </Link>
+                )}
               </div>
             </form>
 
             <div className="pt-4 border-t border-sand-100 text-[11px] text-gray-400">
-              → A continuación: autorización ficticia en Banco de demostración. La reserva aún no está confirmada.
+              → A continuación: autorización ficticia en Banco de demostración.{' '}
+              {datosReserva.tipoPago === 'Saldo'
+                ? 'Estás pagando el saldo pendiente de tu reserva confirmada.'
+                : 'La reserva aún no está confirmada.'}
             </div>
           </div>
 
@@ -257,7 +267,11 @@ export default function PaymentCard() {
 
             <div className="rounded-2xl overflow-hidden h-36 w-full bg-sand-100 border border-sand-200">
               <img 
-                src={datosReserva.img} 
+                src={datosReserva.img || defaultSpaceImg}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = defaultSpaceImg;
+                }}
                 alt={datosReserva.nombreEspacio} 
                 className="w-full h-full object-cover block"
               />
@@ -268,13 +282,13 @@ export default function PaymentCard() {
                 Reserva N° {datosReserva.id_reserva}
               </h3>
               <p className="text-xs text-gray-700 font-medium mt-0.5">{datosReserva.nombreEspacio} · La Reina, Santiago</p>
-              <p className="text-xs text-gray-500">{datosReserva.fecha} · {datosReserva.hora_inicio} · {datosReserva.horas_reservadas} horas</p>
+              <p className="text-xs text-gray-500">{datosReserva.fecha} · {String(datosReserva.hora_inicio || '').slice(0, 5)} · {datosReserva.horas_reservadas} horas</p>
               <p className="text-[11px] text-gray-400 mt-1">{datosReserva.cliente} · {datosReserva.correo_cliente}</p>
             </div>
 
             <div className="bg-sand-50 p-4 rounded-2xl border border-sand-200/80">
               <span className="text-[11px] text-gray-500 block uppercase tracking-wider font-semibold">
-                Monto a simular · {datosReserva.tipoPago === 'Anticipo' ? 'anticipo' : 'pago total'}
+                Monto a simular · {datosReserva.tipoPago === 'Anticipo' ? 'anticipo' : datosReserva.tipoPago === 'Saldo' ? 'saldo pendiente' : 'pago total'}
               </span>
               <div className="text-2xl font-serif font-bold text-forest-900 mt-0.5">
                 ${Number(datosReserva.montoAPagarHoy || 0).toLocaleString('es-CL')} <span className="text-xs font-sans font-normal text-gray-500">CLP</span>
@@ -286,12 +300,12 @@ export default function PaymentCard() {
 
             <div className="space-y-1.5 text-xs text-gray-500 border-t border-sand-100 pt-3">
               <div className="flex justify-between">
-                <span>Total arriendo · 5 horas</span>
-                <span>${Number(datosReserva.monto_total || 0).toLocaleString('es-CL')}</span>
+                <span>Total arriendo · {datosReserva.horas_reservadas || 5} horas</span>
+                <span>${Number(datosReserva.precioArriendo ?? datosReserva.monto_total ?? 0).toLocaleString('es-CL')}</span>
               </div>
               <div className="flex justify-between">
                 <span>Extras seleccionados</span>
-                <span>$0</span>
+                <span>${Number(datosReserva.precioExtras || 0).toLocaleString('es-CL')}</span>
               </div>
             </div>
 

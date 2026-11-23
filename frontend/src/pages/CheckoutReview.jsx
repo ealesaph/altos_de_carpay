@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Check, Lock, ExternalLink } from 'lucide-react';
+import defaultSpaceImg from '../assets/default-space.svg';
 
 export default function CheckoutReview() {
   const navigate = useNavigate();
@@ -19,6 +20,11 @@ export default function CheckoutReview() {
 
   const precioTotal = Number(datosReserva.monto_total);
   const montoAnticipo = Number(datosReserva.monto_anticipo);
+  const precioExtras = Number(
+    datosReserva.precioExtras ??
+      (datosReserva.servicios || []).reduce((acc, s) => acc + Number(s.subtotal || Number(s.valor_unitario || 0) * Number(s.cantidad || 1)), 0)
+  );
+  const precioArriendo = Math.max(0, precioTotal - precioExtras);
   const esAnticipo = tipoPago === 'Anticipo';
   const saldoPendiente = esAnticipo ? precioTotal - montoAnticipo : 0;
   const montoAPagarHoy = esAnticipo ? montoAnticipo : precioTotal;
@@ -56,12 +62,12 @@ export default function CheckoutReview() {
           </Link>
 
           <div className="flex items-center gap-6 text-xs text-gray-600 font-medium">
-            <span className="hidden sm:inline">Espacios</span>
-            <span className="hidden sm:inline">Cómo reservar</span>
-            <span className="hidden sm:inline">Contacto</span>
-            <span className="bg-sand-100 text-forest-900 px-3 py-1.5 rounded-full font-semibold">
+            <Link to="/#espacios" className="hidden sm:inline hover:text-forest-900">Espacios</Link>
+            <Link to="/#como-funciona" className="hidden sm:inline hover:text-forest-900">Cómo reservar</Link>
+            <Link to="/#contacto" className="hidden sm:inline hover:text-forest-900">Contacto</Link>
+            <Link to="/mi-cuenta" className="bg-sand-100 text-forest-900 px-3 py-1.5 rounded-full font-semibold hover:bg-sand-200 transition-colors">
               Mi cuenta · {datosReserva.cliente}
-            </span>
+            </Link>
             <Link to="/mis-reservas" state={datosReserva} className="text-forest-800 hover:underline">
               Mis reservas
             </Link>
@@ -160,12 +166,12 @@ export default function CheckoutReview() {
                   </div>
                   <div>
                     <label className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold block mb-1">
-                      Personas estimadas
+                      Fecha y horario
                     </label>
                     <input 
                       type="text" 
                       readOnly 
-                      value={`${datosReserva.fecha} · ${datosReserva.hora_inicio} · ${datosReserva.horas_reservadas} horas`}
+                      value={`${datosReserva.fecha} · ${String(datosReserva.hora_inicio || '').slice(0, 5)} · ${datosReserva.horas_reservadas} horas`}
                       className="w-full text-sm border border-sand-200 rounded-xl px-4 py-2.5 bg-sand-50/40 text-gray-700 cursor-not-allowed font-medium" 
                     />
                   </div>
@@ -272,7 +278,11 @@ export default function CheckoutReview() {
             
             <div className="rounded-2xl overflow-hidden h-44 w-full bg-sand-100 border border-sand-200">
               <img 
-                src={datosReserva.img} 
+                src={datosReserva.img || defaultSpaceImg}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = defaultSpaceImg;
+                }}
                 alt={datosReserva.nombreEspacio} 
                 className="w-full h-full object-cover block"
               />
@@ -283,7 +293,7 @@ export default function CheckoutReview() {
                 {datosReserva.nombreEspacio}
               </h3>
               <p className="text-xs text-gray-500 mt-1">
-                {datosReserva.fecha} · {datosReserva.hora_inicio} · {datosReserva.horas_reservadas} horas
+                {datosReserva.fecha} · {String(datosReserva.hora_inicio || '').slice(0, 5)} · {datosReserva.horas_reservadas} horas
               </p>
               <p className="text-xs text-gray-500">
                 {datosReserva.cliente}
@@ -294,11 +304,11 @@ export default function CheckoutReview() {
             <div className="space-y-2 text-xs">
               <div className="flex justify-between text-gray-600">
                 <span>Arriendo · {datosReserva.horas_reservadas} horas</span>
-                <span>${precioTotal.toLocaleString('es-CL')}</span>
+                <span>${precioArriendo.toLocaleString('es-CL')}</span>
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Extras seleccionados</span>
-                <span>$0</span>
+                <span>${precioExtras.toLocaleString('es-CL')}</span>
               </div>
               <div className="flex justify-between text-sm font-bold text-forest-900 pt-2 border-t border-sand-100">
                 <span>Total CLP</span>
