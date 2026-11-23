@@ -256,6 +256,10 @@ class BitacoraIncidencia(models.Model):
                               related_name="incidencias_registradas", db_column="id_autor")
     titulo = models.CharField(max_length=120)
     descripcion = models.TextField(max_length=2000)
+    # HU-05: área donde ocurrió la incidencia y alerta si no estaba contratada en la reserva.
+    sector = models.ForeignKey(Sector, on_delete=models.PROTECT, null=True, blank=True,
+                               related_name="incidencias", db_column="id_sector")
+    area_no_contratada = models.BooleanField(default=False)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -270,6 +274,10 @@ class BitacoraIncidencia(models.Model):
             raise PermissionError("Los registros de bitácora son inmutables (solo lectura).")
         if self.reserva.estado == Reserva.Estado.FINALIZADO:
             raise PermissionError("La reserva está finalizada; la bitácora está en modo solo lectura.")
+        self.area_no_contratada = bool(
+            self.sector_id
+            and not self.reserva.sectores_reservados.filter(sector_id=self.sector_id).exists()
+        )
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):

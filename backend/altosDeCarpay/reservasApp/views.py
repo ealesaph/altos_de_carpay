@@ -1,4 +1,3 @@
-import csv
 import os
 import uuid
 from decimal import Decimal
@@ -12,6 +11,7 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from altosDeCarpayApp.exportacion import respuesta_exportacion
 from altosDeCarpayApp.permissions import EsAdministrador
 from . import services
 from .models import BitacoraIncidencia, Pago, Reserva, Review, Sector, Servicio
@@ -91,10 +91,6 @@ class ServicioViewSet(CatalogoViewSet):
         if not (usuario.is_authenticated and usuario.es_admin):
             consulta = consulta.filter(estado=Servicio.Estado.ACTIVO)
         return consulta
-
-def _celda_segura(valor):
-    texto = "" if valor is None else str(valor)
-    return "'" + texto if texto[:1] in ("=", "+", "-", "@", "\t", "\r") else texto
 
 class ReservaViewSet(
     mixins.CreateModelMixin,
@@ -188,17 +184,18 @@ class ReservaViewSet(
 
     @action(detail=False, methods=["get"], url_path="exportar", permission_classes=[EsAdministrador])
     def exportar(self, request):
-        respuesta = HttpResponse(content_type="text/csv; charset=utf-8")
-        respuesta["Content-Disposition"] = 'attachment; filename="reservas_altos_de_carpay.csv"'
-        respuesta.write("\ufeff")
-        escritor = csv.writer(respuesta, delimiter=";")
-        escritor.writerow(["N° reserva", "Cliente", "Correo", "Fecha", "Hora inicio", "Horas", "Estado",
-                           "Monto total", "Monto pagado", "Saldo pendiente"])
-        for r in self.get_queryset():
-            escritor.writerow([_celda_segura(v) for v in (
-                r.pk, r.usuario.nombre_completo, r.usuario.correo, r.fecha, r.hora_inicio.strftime("%H:%M"),
-                r.horas_reservadas, r.estado, r.monto_total, r.monto_pagado, r.saldo_pendiente)])
-        return respuesta
+        """HU-08: reporte de reservas en CSV (por defecto) o en Excel (?formato=xlsx)."""
+        filas = (
+            (r.pk, r.usuario.nombre_completo, r.usuario.correo, r.fecha, r.hora_inicio, r.horas_reservadas,
+             r.estado, r.monto_total, r.monto_pagado, r.saldo_pendiente)
+            for r in self.get_queryset()
+        )
+        return respuesta_exportacion(
+            "reservas_altos_de_carpay", "Reservas",
+            ["N° reserva", "Cliente", "Correo", "Fecha", "Hora inicio", "Horas", "Estado",
+             "Monto total", "Monto pagado", "Saldo pendiente"],
+            filas, request.query_params.get("formato"),
+        )
 
 class ReviewViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
     serializer_class = ReviewSerializer
@@ -222,8 +219,23 @@ class BitacoraIncidenciaViewSet(
     permission_classes = [EsAdministrador]
 
     def get_queryset(self):
-        consulta = BitacoraIncidencia.objects.select_related("reserva", "autor")
+        consulta = BitacoraIncidencia.objects.select_related("reserva", "autor", "sector")
         reserva_id = self.request.query_params.get("reserva", "")
         if reserva_id.isdigit():
             consulta = consulta.filter(reserva_id=int(reserva_id))
         return consulta
+
+    @action(detail=False, methods=["get"], url_path="exportar")
+    def exportar(self, request):
+        """HU-08: reporte de incidencias de la bitácora (CSV o ?formato=xlsx)."""
+        filas = (
+            (f"INC-{i.pk:04d}", i.reserva_id, i.fecha_creacion, i.autor.nombre_completo, i.titulo,
+             i.descripcion, i.sector.nombre if i.sector_id else "", i.area_no_contratada)
+            for i in self.get_queryset()
+        )
+        return respuesta_exportacion(
+            "incidencias_altos_de_carpay", "Incidencias",
+            ["N° incidencia", "N° reserva", "Fecha y hora", "Autor", "Título", "Descripción", "Área",
+             "Área no contratada"],
+            filas, request.query_params.get("formato"),
+        )

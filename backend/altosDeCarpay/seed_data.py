@@ -7,6 +7,8 @@ django.setup()
 from usuariosApp.models import Usuario
 from reservasApp.models import Sector, Servicio
 from decimal import Decimal
+from django.utils import timezone
+from usuariosApp.privacidad import POLITICA_VERSION
 
 def seed():
     print("--- Verificando datos semilla ---")
@@ -34,7 +36,9 @@ def seed():
             nombre='Camila',
             apellido_paterno='Rojas',
             apellido_materno='Pérez',
-            telefono='+56987654321'
+            telefono='+56987654321',
+            consentimiento_datos=timezone.now(),
+            consentimiento_version=POLITICA_VERSION,
         )
         print("✓ Usuario Cliente creado: camila.rojas@gmail.com (Clave: ClientePass2026!)")
     else:

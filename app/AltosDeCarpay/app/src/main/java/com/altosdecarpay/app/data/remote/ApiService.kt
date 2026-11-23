@@ -29,6 +29,12 @@ interface ApiService {
     @POST("auth/cambiar-password/")
     suspend fun cambiarPassword(@Body request: CambioPasswordRequest): Response<Map<String, String>>
 
+    @GET("auth/politica-privacidad/")
+    suspend fun getPoliticaPrivacidad(): Response<PoliticaPrivacidadResponse>
+
+    @POST("auth/consentimiento/")
+    suspend fun registrarConsentimiento(@Body request: ConsentimientoRequest): Response<Map<String, Any>>
+
     @GET("auth/mis-datos/")
     suspend fun getMisDatosArco(): Response<Map<String, Any>>
 

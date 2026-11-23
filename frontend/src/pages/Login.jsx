@@ -24,9 +24,13 @@ export default function Login() {
     setEnviando(true);
     try {
       const usuario = await login(credenciales.correo, credenciales.password);
-      navigate(
-        location.state?.next || (usuario.rol === 'Admin' ? '/admin' : '/reservar/espacio'),
-      );
+      const destino = location.state?.next || (usuario.rol === 'Admin' ? '/admin' : '/reservar/espacio');
+      if (usuario.requiere_consentimiento) {
+        // Ley N° 21.719: el titular debe aceptar la versión vigente de la política antes de continuar
+        navigate('/privacidad', { state: { aceptar: true, next: destino } });
+      } else {
+        navigate(destino);
+      }
     } catch (requestError) {
       setError(requestError.message);
     } finally {

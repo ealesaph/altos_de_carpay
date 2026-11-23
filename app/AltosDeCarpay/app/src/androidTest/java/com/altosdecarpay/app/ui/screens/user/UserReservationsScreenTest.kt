@@ -3,8 +3,12 @@ package com.altosdecarpay.app.ui.screens.user
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.altosdecarpay.app.data.SessionState
+import com.altosdecarpay.app.data.remote.TokenManager
 import com.altosdecarpay.app.ui.theme.AltosDeCarpayTheme
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -15,6 +19,13 @@ class UserReservationsScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    @Before
+    fun limpiarSesion() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        TokenManager(context).clearSession()
+        SessionState.clear()
+    }
+
     @Test
     fun userReservations_displaysHeaderAndTitle() {
         composeTestRule.setContent {
@@ -23,8 +34,13 @@ class UserReservationsScreenTest {
             }
         }
 
+        composeTestRule.waitUntil(timeoutMillis = 10_000) {
+            composeTestRule.onAllNodesWithText("Un almuerzo en familia").fetchSemanticsNodes().isNotEmpty()
+        }
+
         composeTestRule.onNodeWithText("Tus buenos momentos").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Hola, Camila. Tu próximo encuentro empieza aquí.").assertIsDisplayed()
+        // El saludo usa el nombre de la sesión activa ("Usuario" si no hay sesión)
+        composeTestRule.onNodeWithText("Tu próximo encuentro empieza aquí.", substring = true).assertIsDisplayed()
         composeTestRule.onNodeWithText("Un almuerzo en familia").assertIsDisplayed()
     }
 
@@ -40,6 +56,9 @@ class UserReservationsScreenTest {
             }
         }
 
+        composeTestRule.waitUntil(timeoutMillis = 10_000) {
+            composeTestRule.onAllNodesWithText("Un almuerzo en familia").fetchSemanticsNodes().isNotEmpty()
+        }
         composeTestRule.onNodeWithText("Un almuerzo en familia").performClick()
 
         assertEquals("RES-0261", selectedReservaId)

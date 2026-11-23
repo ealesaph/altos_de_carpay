@@ -29,6 +29,7 @@ import {
   createPayment,
   createStaffAdmin,
   exportReservationsCsv,
+  exportarReporte,
   getConsultas,
   getProfile,
   getReservations,
@@ -578,13 +579,30 @@ export default function AdminDashboard() {
                 <div>
                   <h2 className="font-serif text-xl font-semibold text-forest-900">Próximas reservas</h2>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => exportReservationsCsv().catch((e) => setError(e.message))}
-                  className="text-xs font-semibold text-forest-800 hover:underline"
-                >
-                  Exportar CSV (Excel) →
-                </button>
+                <div className="flex flex-wrap items-center gap-3 text-xs">
+                  <span className="text-gray-500">Exportar a Excel:</span>
+                  {[
+                    ['reservas', 'Reservas'],
+                    ['usuarios', 'Usuarios'],
+                    ['incidencias', 'Incidencias'],
+                  ].map(([tipo, etiqueta]) => (
+                    <button
+                      key={tipo}
+                      type="button"
+                      onClick={() => exportarReporte(tipo).catch((e) => setError(e.message))}
+                      className="font-semibold text-forest-800 hover:underline"
+                    >
+                      {etiqueta} (.xlsx)
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => exportReservationsCsv().catch((e) => setError(e.message))}
+                    className="text-gray-500 hover:underline"
+                  >
+                    CSV
+                  </button>
+                </div>
               </div>
 
               <div className="p-4 bg-sand-50/40 border-b border-sand-100 flex flex-wrap gap-3 items-center justify-between text-xs">

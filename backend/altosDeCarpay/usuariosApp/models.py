@@ -1,8 +1,10 @@
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
+from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
 
+from .cifrado import CampoCifrado, huella_rut
 from .validators import normalizar_rut, validar_rut
 
 
@@ -38,12 +40,14 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 
     id_usuario = models.AutoField(primary_key=True)
     correo = models.EmailField(max_length=100, unique=True)
-    rut = models.CharField(max_length=12, unique=True, validators=[validar_rut])
+    # Datos personales cifrados en reposo; la huella HMAC del RUT garantiza la unicidad sin exponerlo.
+    rut = CampoCifrado(max_length=255, validators=[validar_rut])
+    rut_hash = models.CharField(max_length=64, unique=True, editable=False)
     nombre = models.CharField(max_length=50)
     apellido_paterno = models.CharField(max_length=50)
     apellido_materno = models.CharField(max_length=50)
-    telefono = models.CharField(
-        max_length=20, blank=True, default="",
+    telefono = CampoCifrado(
+        max_length=255, blank=True, default="",
         validators=[RegexValidator(r"^\+?\d{8,15}$", "Ingrese un teléfono válido (ej.: +56912345678).")],
     )
     password = models.CharField("contraseña", max_length=255)
@@ -52,6 +56,8 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     ultima_conexion = models.DateTimeField(null=True, blank=True)
     # Evidencia del consentimiento informado exigido por la Ley N° 21.719.
     consentimiento_datos = models.DateTimeField(null=True, blank=True)
+    # Versión de la política aceptada; si cambia la política se vuelve a solicitar el consentimiento.
+    consentimiento_version = models.CharField(max_length=20, blank=True, default="")
 
     last_login = None  # Se reemplaza por `ultima_conexion`.
 
@@ -67,9 +73,18 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f"{self.nombre} {self.apellido_paterno} ({self.correo})"
 
+    def clean(self):
+        super().clean()
+        if self.rut and Usuario.objects.exclude(pk=self.pk).filter(rut_hash=huella_rut(self.rut)).exists():
+            raise ValidationError({"rut": "Ya existe una cuenta con este RUT."})
+
     def save(self, *args, **kwargs):
         self.rut = normalizar_rut(self.rut)
+        self.rut_hash = huella_rut(self.rut)
         self.correo = self.correo.lower()
+        campos = kwargs.get("update_fields")
+        if campos is not None and "rut" in campos:
+            kwargs["update_fields"] = set(campos) | {"rut_hash"}
         super().save(*args, **kwargs)
 
     @property

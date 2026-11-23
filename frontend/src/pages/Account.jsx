@@ -12,6 +12,8 @@ import {
 import {
   changePassword,
   deactivateAccount,
+  getConsentStatus,
+  getMyData,
   getProfile,
   hasSession,
   logout,
@@ -37,6 +39,8 @@ export default function Account() {
   const [confirmandoCierreCuenta, setConfirmandoCierreCuenta] = useState(false);
   const [cerrandoCuenta, setCerrandoCuenta] = useState(false);
   const [mensaje, setMensaje] = useState('');
+  const [consentimiento, setConsentimiento] = useState(null);
+  const [descargandoDatos, setDescargandoDatos] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -46,6 +50,9 @@ export default function Account() {
     }
 
     let activo = true;
+    getConsentStatus()
+      .then((data) => activo && setConsentimiento(data))
+      .catch(() => {});
     getProfile()
       .then((data) => {
         if (!activo) return;
@@ -110,6 +117,25 @@ export default function Account() {
     setError('');
     await logout();
     navigate('/');
+  };
+
+  const descargarMisDatos = async () => {
+    setError('');
+    setDescargandoDatos(true);
+    try {
+      const datos = await getMyData();
+      const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = `mis-datos-altos-de-carpay-${new Date().toISOString().slice(0, 10)}.json`;
+      enlace.click();
+      URL.revokeObjectURL(url);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setDescargandoDatos(false);
+    }
   };
 
   const manejarDesactivarCuenta = async () => {
@@ -309,6 +335,29 @@ export default function Account() {
                   {cambiandoClave ? 'Actualizando…' : 'Actualizar contraseña'}
                 </button>
               </form>
+
+              <section className="bg-white p-6 rounded-3xl border border-sand-200/80 shadow-sm space-y-3">
+                <h2 className="font-serif text-lg font-semibold">Mis datos personales</h2>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  {consentimiento?.consentimiento_datos
+                    ? `Aceptaste la política de datos (versión ${consentimiento.consentimiento_version || 'anterior'}) el ${new Date(consentimiento.consentimiento_datos).toLocaleString('es-CL')}.`
+                    : 'Aún no registras tu consentimiento para el tratamiento de tus datos.'}{' '}
+                  Conforme a la Ley N° 21.719 puedes descargar una copia de tus datos, corregirlos arriba o cerrar tu cuenta.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={descargarMisDatos}
+                    disabled={descargandoDatos}
+                    className="bg-forest-800 text-white text-xs font-semibold px-5 py-2.5 rounded-full hover:bg-forest-900 disabled:opacity-50"
+                  >
+                    {descargandoDatos ? 'Preparando…' : 'Descargar mis datos (JSON)'}
+                  </button>
+                  <Link to="/privacidad" className="text-xs font-semibold text-forest-800 underline self-center">
+                    Ver política de datos
+                  </Link>
+                </div>
+              </section>
 
               {!esAdmin && (
                 <section className="bg-white p-6 rounded-3xl border border-red-200/80 shadow-sm space-y-3">

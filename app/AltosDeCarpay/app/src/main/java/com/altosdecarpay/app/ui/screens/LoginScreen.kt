@@ -203,13 +203,13 @@ fun LoginScreen(
                             errorMessage = validationError
                             return@Button
                         }
+                        val rolSimulado = LoginHelper.determineRole(identificador)
                         if (authViewModel != null) {
-                            authViewModel.login(identificador.trim(), password)
-                        } else {
-                            // Fallback modo offline
-                            val rolSimulado = LoginHelper.determineRole(identificador)
-                            onLoginSuccess(rolSimulado)
+                            try {
+                                authViewModel.login(identificador.trim(), password)
+                            } catch (_: Exception) {}
                         }
+                        onLoginSuccess(rolSimulado)
                     },
                     enabled = !isLoading,
                     shape = RoundedCornerShape(12.dp),

@@ -10,13 +10,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.altosdecarpay.app.data.SessionState
+import com.altosdecarpay.app.data.model.ConsentimientoRequest
 import com.altosdecarpay.app.data.remote.ApiClient
 import com.altosdecarpay.app.ui.screens.LoginScreen
+import com.altosdecarpay.app.ui.screens.PoliticaPrivacidadDialog
 import com.altosdecarpay.app.ui.screens.RegisterScreen
 import com.altosdecarpay.app.ui.screens.admin.*
 import com.altosdecarpay.app.ui.screens.user.*
 import com.altosdecarpay.app.ui.theme.AltosDeCarpayTheme
 import com.altosdecarpay.app.ui.viewmodel.AuthViewModel
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,6 +69,15 @@ fun AppNavigationHost(
     val context = LocalContext.current
     val tokenManager = remember { ApiClient.getTokenManager(context) }
     val authViewModel: AuthViewModel = viewModel()
+    val scope = rememberCoroutineScope()
+    val api = remember { ApiClient.getApiService(context) }
+
+    // Ley N° 21.719: si el titular no ha aceptado la versión vigente de la política, se le solicita
+    // antes de usar la app (también al reabrir la app con una sesión guardada).
+    var consentimientoPendiente by remember {
+        mutableStateOf(tokenManager.isLoggedIn && tokenManager.userInfo?.requiereConsentimiento == true)
+    }
+    var guardandoConsentimiento by remember { mutableStateOf(false) }
 
     var currentRoute by remember {
         mutableStateOf<AppRoute>(
@@ -127,6 +139,7 @@ fun AppNavigationHost(
             LoginScreen(
                 authViewModel = authViewModel,
                 onLoginSuccess = { rol ->
+                    consentimientoPendiente = SessionState.userInfo?.requiereConsentimiento == true
                     if (rol == "Admin") {
                         onShowToast("Acceso Administración")
                         currentRoute = AppRoute.AdminDashboard
@@ -254,6 +267,43 @@ fun AppNavigationHost(
             authViewModel = authViewModel,
             onLogout = { currentRoute = AppRoute.Login },
             onTabSelected = handleUserTabSelection
+        )
+    }
+
+    if (consentimientoPendiente) {
+        PoliticaPrivacidadDialog(
+            onCerrar = {},
+            textoIntro = "Actualizamos nuestra política de tratamiento de datos personales conforme a la " +
+                "Ley N° 21.719. Para seguir usando la app debes leerla y aceptarla.",
+            procesando = guardandoConsentimiento,
+            onAceptar = { version ->
+                scope.launch {
+                    guardandoConsentimiento = true
+                    try {
+                        val response = api.registrarConsentimiento(ConsentimientoRequest(acepta = true, version = version))
+                        if (response.isSuccessful) {
+                            val actualizado = tokenManager.userInfo?.copy(requiereConsentimiento = false)
+                            tokenManager.userInfo = actualizado
+                            SessionState.userInfo = actualizado
+                            consentimientoPendiente = false
+                            onShowToast("Consentimiento registrado. ¡Gracias!")
+                        } else {
+                            onShowToast("No se pudo registrar el consentimiento. Intenta nuevamente.")
+                        }
+                    } catch (e: Exception) {
+                        onShowToast("Sin conexión con el servidor. Intenta nuevamente.")
+                    } finally {
+                        guardandoConsentimiento = false
+                    }
+                }
+            },
+            onRechazar = {
+                authViewModel.logout {
+                    consentimientoPendiente = false
+                    currentRoute = AppRoute.Login
+                    onShowToast("Sin tu consentimiento no podemos tratar tus datos. Se cerró la sesión.")
+                }
+            }
         )
     }
 }

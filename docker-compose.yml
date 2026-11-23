@@ -4,18 +4,18 @@ services:
     image: postgres:16-alpine
     container_name: carpay_postgres
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-altos_de_carpay_db}
-      POSTGRES_USER: ${POSTGRES_USER:-carpay_admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CarpaySecurePass2026!}
+    # Credenciales solo en backend/altosDeCarpay/.env (excluido de Git): POSTGRES_DB, POSTGRES_USER y POSTGRES_PASSWORD.
+    env_file:
+      - ./backend/altosDeCarpay/.env
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Solo accesible desde el propio equipo (pgAdmin local); no queda expuesto a la red.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     networks:
       - carpay_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-carpay_admin} -d ${POSTGRES_DB:-altos_de_carpay_db}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -29,12 +29,10 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/altosDeCarpay/.env
+    # DB_NAME, DB_USER y DB_PASSWORD vienen del mismo .env; aquí solo se fija el host de la red interna.
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: ${POSTGRES_DB:-altos_de_carpay_db}
-      DB_USER: ${POSTGRES_USER:-carpay_admin}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-CarpaySecurePass2026!}
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
     volumes:

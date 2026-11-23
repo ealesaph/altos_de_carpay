@@ -12,6 +12,7 @@ import Confirmation from './pages/Confirmation.jsx';
 import ClientReservations from './pages/ClientReservations.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import Account from './pages/Account.jsx';
+import Privacidad from './pages/Privacidad.jsx';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
         {/* Cliente: Mis Reservas y Cuenta */}
         <Route path="/mis-reservas" element={<ClientReservations />} />
         <Route path="/mi-cuenta" element={<Account />} />
+        <Route path="/privacidad" element={<Privacidad />} />
 
         {/* Rol Administrativo */}
         <Route path="/admin" element={<AdminDashboard />} />

@@ -9,7 +9,9 @@ from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
+from .privacidad import POLITICA_VERSION, requiere_consentimiento
 from .models import Usuario
+from .cifrado import huella_rut
 from .validators import normalizar_rut, validar_rut
 
 seguridad = logging.getLogger("seguridad")
@@ -23,6 +25,12 @@ class RutField(serializers.CharField):
         except DjangoValidationError as error:
             raise serializers.ValidationError(error.messages)
         return normalizar_rut(valor)
+
+
+def rut_no_registrado(valor):
+    """El RUT se guarda cifrado: la unicidad se verifica con su huella HMAC."""
+    if Usuario.objects.filter(rut_hash=huella_rut(valor)).exists():
+        raise serializers.ValidationError("Ya existe una cuenta con este RUT.")
 
 
 def _validar_clave(clave, usuario=None):
@@ -40,8 +48,7 @@ class RegistroSerializer(serializers.ModelSerializer):
     )
     rut = RutField(
         max_length=15,
-        validators=[UniqueValidator(queryset=Usuario.objects.all(),
-                                    message="Ya existe una cuenta con este RUT.")],
+        validators=[rut_no_registrado],
     )
     password = serializers.CharField(write_only=True, max_length=128, trim_whitespace=False,
                                      style={"input_type": "password"})
@@ -72,7 +79,8 @@ class RegistroSerializer(serializers.ModelSerializer):
         datos.pop("acepta_politica_datos")
         clave = datos.pop("password")
         return Usuario.objects.create_user(
-            password=clave, consentimiento_datos=timezone.now(), **datos
+            password=clave, consentimiento_datos=timezone.now(),
+            consentimiento_version=POLITICA_VERSION, **datos
         )
 
 
@@ -92,8 +100,7 @@ class CrearPersonalAdminSerializer(serializers.ModelSerializer):
     )
     rut = RutField(
         max_length=15,
-        validators=[UniqueValidator(queryset=Usuario.objects.all(),
-                                    message="Ya existe una cuenta con este RUT.")],
+        validators=[rut_no_registrado],
     )
     password = serializers.CharField(write_only=True, max_length=128, trim_whitespace=False,
                                      style={"input_type": "password"})
@@ -186,6 +193,7 @@ class LoginSerializer(TokenObtainPairSerializer):
             "nombre": self.user.nombre,
             "rol": self.user.rol,
             "is_superuser": self.user.is_superuser,
+            "requiere_consentimiento": requiere_consentimiento(self.user),
         }
         return datos
 
@@ -198,3 +206,24 @@ class LogoutSerializer(serializers.Serializer):
             RefreshToken(self.validated_data["refresh"]).blacklist()
         except TokenError:
             raise serializers.ValidationError({"refresh": "Token inválido o ya expirado."})
+
+
+class ConsentimientoSerializer(serializers.Serializer):
+    """Registra el consentimiento informado de un titular con cuenta existente (Ley N° 21.719)."""
+    acepta = serializers.BooleanField()
+    version = serializers.CharField(max_length=20)
+
+    def validate_acepta(self, valor):
+        if valor is not True:
+            raise serializers.ValidationError(
+                "Para continuar debe aceptar la política de tratamiento de datos personales. "
+                "Si no está de acuerdo, puede desactivar su cuenta."
+            )
+        return valor
+
+    def validate_version(self, valor):
+        if valor != POLITICA_VERSION:
+            raise serializers.ValidationError(
+                f"La política vigente es la versión {POLITICA_VERSION}. Vuelva a leerla antes de aceptar."
+            )
+        return valor

@@ -6,7 +6,7 @@ Aplicación web React/Vite conectada a una API Django REST y PostgreSQL, orquest
 
 ## Despliegue Rápido con Docker (Recomendado)
 
-1. Copia `.env.example` a `.env` en la raíz del proyecto (y opcionalmente en `backend/altosDeCarpay/.env` si ejecutas comandos locales). No subas archivos `.env` a Git.
+1. Copia `backend/altosDeCarpay/.env.example` a `backend/altosDeCarpay/.env` y completa los valores. `docker-compose.yml` lee de ese archivo las credenciales de PostgreSQL y del backend (no tiene contraseñas escritas). Define `FIELD_ENCRYPTION_KEY`, la clave con que se cifran en la base el RUT y el teléfono (genérala con `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` y respáldala: si se pierde, esos datos no se pueden leer). No subas archivos `.env` a Git.
 2. Asegúrate de tener **Docker Desktop** abierto y ejecutándose.
 3. Levanta los 3 servicios (`carpay_postgres`, `carpay_backend`, `carpay_frontend`) con un solo comando:
 
@@ -14,7 +14,10 @@ Aplicación web React/Vite conectada a una API Django REST y PostgreSQL, orquest
    docker compose up -d --build
    ```
 
-4. El contenedor `carpay_backend` espera automáticamente a que PostgreSQL esté saludable (`healthy`), ejecuta `makemigrations`, aplica `migrate` y carga los datos semilla iniciales (`seed_data.py`).
+4. El contenedor `carpay_backend` espera automáticamente a que PostgreSQL esté saludable (`healthy`) y aplica `migrate`.
+   * Con `DJANGO_DEBUG=true` (desarrollo) además ejecuta `makemigrations`, carga los datos semilla (`seed_data.py`) y usa el servidor de desarrollo de Django.
+   * Con `DJANGO_DEBUG=false` (producción) ejecuta `collectstatic` y levanta **Gunicorn**; los datos semilla solo se cargan si `CARGAR_DATOS_SEMILLA=true`, y se exigen `DJANGO_SECRET_KEY` y `FIELD_ENCRYPTION_KEY`.
+   * PostgreSQL solo publica el puerto 5432 en `127.0.0.1` (no queda expuesto a la red).
 
 ### Accesos y Credenciales de Prueba (Seed Automático)
 

@@ -47,13 +47,15 @@ fun RegisterScreen(
     var nombre by remember { mutableStateOf("") }
     var apellidoPaterno by remember { mutableStateOf("") }
     var apellidoMaterno by remember { mutableStateOf("") }
-    var direccion by remember { mutableStateOf("") }
     var telefono by remember { mutableStateOf("") }
-    var diaNac by remember { mutableStateOf("") }
-    var mesNac by remember { mutableStateOf("") }
-    var anioNac by remember { mutableStateOf("") }
+    // Ley N° 21.719 (minimización): no se solicitan dirección ni fecha de nacimiento,
+    // porque el servicio de reservas no las necesita.
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Ley N° 21.719: consentimiento libre, informado y explícito (no puede venir marcado por defecto)
+    var aceptaPolitica by remember { mutableStateOf(false) }
+    var mostrarPolitica by remember { mutableStateOf(false) }
 
     val registroState by authViewModel?.registroState?.collectAsState() ?: remember { mutableStateOf(null) }
 
@@ -71,6 +73,10 @@ fun RegisterScreen(
     }
 
     val isLoading = registroState is NetworkResult.Loading
+
+    if (mostrarPolitica) {
+        PoliticaPrivacidadDialog(onCerrar = { mostrarPolitica = false })
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -323,15 +329,6 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                RegisterLabel("Dirección:")
-                RegisterTextField(
-                    value = direccion,
-                    onValueChange = { direccion = it; errorMessage = null },
-                    placeholder = "Calle, número y comuna"
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
                 RegisterLabel("Numero de contacto:")
                 RegisterTextField(
                     value = telefono,
@@ -340,35 +337,30 @@ fun RegisterScreen(
                     keyboardType = KeyboardType.Phone
                 )
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Año de nacimiento (DD / MM / YYYY)
-                RegisterLabel("Año de nacimiento:")
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    RegisterTextField(
-                        value = diaNac,
-                        onValueChange = { if (it.length <= 2) diaNac = it },
-                        placeholder = "DD",
-                        keyboardType = KeyboardType.Number,
-                        modifier = Modifier.weight(1f)
+                // Consentimiento informado (Ley N° 21.719)
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+                    Checkbox(
+                        checked = aceptaPolitica,
+                        onCheckedChange = { aceptaPolitica = it },
+                        colors = CheckboxDefaults.colors(checkedColor = CarpayPrimaryGreen)
                     )
-                    RegisterTextField(
-                        value = mesNac,
-                        onValueChange = { if (it.length <= 2) mesNac = it },
-                        placeholder = "MM",
-                        keyboardType = KeyboardType.Number,
-                        modifier = Modifier.weight(1f)
-                    )
-                    RegisterTextField(
-                        value = anioNac,
-                        onValueChange = { if (it.length <= 4) anioNac = it },
-                        placeholder = "YYYY",
-                        keyboardType = KeyboardType.Number,
-                        modifier = Modifier.weight(1.2f)
-                    )
+                    Column(modifier = Modifier.padding(top = 12.dp)) {
+                        Text(
+                            text = "Acepto la política de tratamiento de datos personales (Ley N° 21.719).",
+                            color = CarpayTextPrimary,
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = "Ver política de datos",
+                            color = CarpayPrimaryGreen,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier
+                                .padding(top = 4.dp)
+                                .clickable { mostrarPolitica = true }
+                        )
+                    }
                 }
 
                 if (errorMessage != null) {
@@ -385,6 +377,10 @@ fun RegisterScreen(
                             errorMessage = "Por favor completa al menos tu nombre, apellido y teléfono."
                             return@Button
                         }
+                        if (!aceptaPolitica) {
+                            errorMessage = "Debes leer y aceptar la política de tratamiento de datos personales para crear tu cuenta."
+                            return@Button
+                        }
                         if (authViewModel != null) {
                             authViewModel.registro(
                                 RegistroRequest(
@@ -395,7 +391,7 @@ fun RegisterScreen(
                                     apellidoMaterno = apellidoMaterno.trim().ifBlank { apellidoPaterno.trim() },
                                     telefono = telefono.trim(),
                                     password = password,
-                                    aceptaPoliticaDatos = true
+                                    aceptaPoliticaDatos = aceptaPolitica
                                 )
                             )
                         } else {

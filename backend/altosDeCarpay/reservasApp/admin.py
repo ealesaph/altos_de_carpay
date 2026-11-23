@@ -17,7 +17,7 @@ class ReservaServicioInline(admin.TabularInline):
 class ReservaAdmin(admin.ModelAdmin):
     list_display = ("id_reserva", "usuario", "fecha", "hora_inicio", "estado", "monto_total")
     list_filter = ("estado", "fecha")
-    search_fields = ("usuario__correo", "usuario__rut")
+    search_fields = ("usuario__correo", "usuario__nombre", "usuario__apellido_paterno")
     readonly_fields = ("fecha_creacion", "condiciones_aceptadas_en", "token_qr")
     inlines = [ReservaSectorInline, ReservaServicioInline]
 

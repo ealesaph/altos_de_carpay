@@ -262,7 +262,11 @@ export default function Register() {
                   className="mt-1 rounded text-forest-800 focus:ring-forest-700" 
                 />
                 <span className="text-xs text-gray-600 leading-snug">
-                  Acepto los términos de uso y he leído la política de privacidad. *
+                  Acepto los términos de uso y he leído la{' '}
+                  <Link to="/privacidad" target="_blank" rel="noopener noreferrer" className="font-semibold text-forest-800 underline">
+                    política de tratamiento de datos personales
+                  </Link>{' '}
+                  (Ley N° 21.719). *
                 </span>
               </label>
               <span className="text-[10px] text-gray-400 block mt-1 ml-6">

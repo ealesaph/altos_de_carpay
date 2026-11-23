@@ -24,13 +24,14 @@ class UsuarioAdmin(UserAdmin):
     ordering = ("correo",)
     list_display = ("correo", "rut", "nombre", "apellido_paterno", "rol", "estado", "ultima_conexion")
     list_filter = ("rol", "estado")
-    search_fields = ("correo", "rut", "nombre", "apellido_paterno")
-    readonly_fields = ("ultima_conexion", "consentimiento_datos")
+    # El RUT está cifrado: se busca por correo o nombre (la búsqueda exacta por RUT está en la API).
+    search_fields = ("correo", "nombre", "apellido_paterno")
+    readonly_fields = ("ultima_conexion", "consentimiento_datos", "consentimiento_version")
     fieldsets = (
         (None, {"fields": ("correo", "password")}),
         ("Datos personales", {"fields": ("rut", "nombre", "apellido_paterno", "apellido_materno", "telefono")}),
         ("Rol y estado", {"fields": ("rol", "estado", "is_superuser", "groups", "user_permissions")}),
-        ("Trazabilidad", {"fields": ("ultima_conexion", "consentimiento_datos")}),
+        ("Trazabilidad", {"fields": ("ultima_conexion", "consentimiento_datos", "consentimiento_version")}),
     )
     add_fieldsets = (
         (None, {

@@ -3,11 +3,13 @@ from rest_framework.routers import SimpleRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     CambiarPasswordView,
+    ConsentimientoView,
     DesactivarCuentaArcoView,
     LoginView,
     LogoutView,
     MisDatosArcoView,
     PerfilView,
+    PoliticaPrivacidadView,
     RegistroView,
     UsuarioAdminViewSet,
 )
@@ -22,6 +24,8 @@ urlpatterns = [
     path("auth/logout/", LogoutView.as_view(), name="logout"),
     path("auth/perfil/", PerfilView.as_view(), name="perfil"),
     path("auth/cambiar-password/", CambiarPasswordView.as_view(), name="cambiar_password"),
+    path("auth/politica-privacidad/", PoliticaPrivacidadView.as_view(), name="politica_privacidad"),
+    path("auth/consentimiento/", ConsentimientoView.as_view(), name="consentimiento"),
     path("auth/mis-datos/", MisDatosArcoView.as_view(), name="mis_datos_arco"),
     path("auth/desactivar-cuenta/", DesactivarCuentaArcoView.as_view(), name="desactivar_cuenta_arco"),
 ] + router.urls

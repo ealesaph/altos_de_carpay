@@ -45,7 +45,28 @@ data class TokenRefreshResponse(
 data class UsuarioInfo(
     @SerializedName("id_usuario") val idUsuario: Int,
     val nombre: String,
-    val rol: String
+    val rol: String,
+    // Ley N° 21.719: true si el titular aún no acepta la versión vigente de la política de datos
+    @SerializedName("requiere_consentimiento") val requiereConsentimiento: Boolean = false
+)
+
+// ── Ley N° 21.719: política de datos y consentimiento ──
+
+data class SeccionPolitica(
+    val titulo: String,
+    val contenido: String
+)
+
+data class PoliticaPrivacidadResponse(
+    val version: String,
+    val titulo: String,
+    val responsable: Map<String, String>,
+    val secciones: List<SeccionPolitica>
+)
+
+data class ConsentimientoRequest(
+    val acepta: Boolean,
+    val version: String
 )
 
 data class PerfilResponse(

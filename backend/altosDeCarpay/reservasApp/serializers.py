@@ -211,12 +211,26 @@ class ValidacionAccesoCrearSerializer(serializers.Serializer):
 class BitacoraIncidenciaSerializer(serializers.ModelSerializer):
     autor_nombre = serializers.CharField(source="autor.nombre_completo", read_only=True)
     reserva_estado = serializers.CharField(source="reserva.estado", read_only=True)
+    sector_nombre = serializers.SerializerMethodField()
+    alerta = serializers.SerializerMethodField()
 
     class Meta:
         model = BitacoraIncidencia
         fields = ["id_incidencia", "reserva", "reserva_estado", "autor", "autor_nombre",
-                  "titulo", "descripcion", "fecha_creacion"]
-        read_only_fields = ["id_incidencia", "autor", "fecha_creacion"]
+                  "titulo", "descripcion", "sector", "sector_nombre", "area_no_contratada",
+                  "alerta", "fecha_creacion"]
+        read_only_fields = ["id_incidencia", "autor", "area_no_contratada", "fecha_creacion"]
+
+    def get_sector_nombre(self, incidencia):
+        return incidencia.sector.nombre if incidencia.sector_id else None
+
+    def get_alerta(self, incidencia):
+        """HU-05: aviso para el anfitrión cuando se usa un área que el cliente no contrató."""
+        if not incidencia.area_no_contratada:
+            return None
+        return (f"Área no contratada: «{incidencia.sector.nombre}» no forma parte de la reserva "
+                f"N° {incidencia.reserva_id}. Corresponde aplicar el cobro adicional según las "
+                f"condiciones del arriendo.")
 
     def validate_titulo(self, valor):
         return texto_obligatorio(valor, "El título")

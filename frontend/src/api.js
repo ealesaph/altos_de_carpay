@@ -126,6 +126,32 @@ export async function deactivateAccount() {
   }
 }
 
+// ── Ley N° 21.719: política de datos, consentimiento y portabilidad ──
+
+export async function getPrivacyPolicy() {
+  return apiRequest('/auth/politica-privacidad/');
+}
+
+export async function getConsentStatus() {
+  return apiRequest('/auth/consentimiento/');
+}
+
+export async function acceptConsent(version) {
+  const data = await apiRequest('/auth/consentimiento/', {
+    method: 'POST',
+    body: JSON.stringify({ acepta: true, version }),
+  });
+  const guardado = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+  if (guardado) {
+    localStorage.setItem(USER_KEY, JSON.stringify({ ...guardado, requiere_consentimiento: false }));
+  }
+  return data;
+}
+
+export async function getMyData() {
+  return apiRequest('/auth/mis-datos/');
+}
+
 export async function registerCustomer(form) {
   return apiRequest('/auth/registro/', {
     method: 'POST',
@@ -244,12 +270,22 @@ export async function replyConsulta(id, respuesta) {
   });
 }
 
-export async function exportReservationsCsv() {
-  let response = await sendRequest('/reservas/exportar/', { method: 'GET' }, localStorage.getItem(ACCESS_TOKEN_KEY));
+const REPORTES = {
+  reservas: { ruta: '/reservas/exportar/', archivo: 'reservas_altos_de_carpay' },
+  usuarios: { ruta: '/usuarios/exportar/', archivo: 'usuarios_altos_de_carpay' },
+  incidencias: { ruta: '/incidencias/exportar/', archivo: 'incidencias_altos_de_carpay' },
+};
+
+// HU-08: descarga un reporte en Excel (.xlsx, por defecto) o CSV.
+export async function exportarReporte(tipo = 'reservas', formato = 'xlsx') {
+  const reporte = REPORTES[tipo];
+  if (!reporte) throw new Error('Reporte no disponible.');
+  const ruta = `${reporte.ruta}?formato=${formato}`;
+  let response = await sendRequest(ruta, { method: 'GET' }, localStorage.getItem(ACCESS_TOKEN_KEY));
   if (response.status === 401) {
     const newAccessToken = await refreshAccessToken();
     if (newAccessToken) {
-      response = await sendRequest('/reservas/exportar/', { method: 'GET' }, newAccessToken);
+      response = await sendRequest(ruta, { method: 'GET' }, newAccessToken);
     }
   }
   if (!response.ok) {
@@ -259,11 +295,15 @@ export async function exportReservationsCsv() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'reservas_altos_de_carpay.csv';
+  link.download = `${reporte.archivo}.${formato}`;
   document.body.appendChild(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+export async function exportReservationsCsv() {
+  return exportarReporte('reservas', 'csv');
 }
 
 export async function logout() {

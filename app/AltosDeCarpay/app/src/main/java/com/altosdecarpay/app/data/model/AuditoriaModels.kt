@@ -39,7 +39,8 @@ data class ValidacionAccesoResponse(
 data class BitacoraIncidenciaRequest(
     val reserva: Int,
     val titulo: String,
-    val descripcion: String
+    val descripcion: String,
+    val sector: Int? = null
 )
 
 data class BitacoraIncidenciaResponse(
@@ -50,7 +51,11 @@ data class BitacoraIncidenciaResponse(
     @SerializedName("autor_nombre") val autorNombre: String?,
     val titulo: String,
     val descripcion: String,
-    @SerializedName("fecha_creacion") val fechaCreacion: String
+    @SerializedName("fecha_creacion") val fechaCreacion: String,
+    val sector: Int? = null,
+    @SerializedName("sector_nombre") val sectorNombre: String? = null,
+    @SerializedName("area_no_contratada") val areaNoContratada: Boolean = false,
+    val alerta: String? = null
 ) {
     val idFormateado: String get() = "INC-%04d".format(idIncidencia)
 }

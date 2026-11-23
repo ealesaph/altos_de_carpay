@@ -130,7 +130,8 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
         reservaId: Int,
         titulo: String,
         descripcion: String,
-        onSuccess: () -> Unit = {},
+        sectorId: Int? = null,
+        onSuccess: (BitacoraIncidenciaResponse?) -> Unit = {},
         onError: (String) -> Unit = {}
     ) {
         viewModelScope.launch {
@@ -139,12 +140,13 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
                     BitacoraIncidenciaRequest(
                         reserva = reservaId,
                         titulo = titulo.trim(),
-                        descripcion = descripcion.trim()
+                        descripcion = descripcion.trim(),
+                        sector = sectorId
                     )
                 )
                 if (response.isSuccessful) {
                     loadIncidencias(reservaId)
-                    onSuccess()
+                    onSuccess(response.body())
                 } else {
                     onError("No se pudo guardar (la reserva podría estar finalizada en solo lectura).")
                 }

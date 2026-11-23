@@ -1,6 +1,7 @@
 package com.altosdecarpay.app.ui.screens.admin
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,18 +34,38 @@ fun AdminBitacoraScreen(
     val incidenciasState by serviciosViewModel.incidencias.collectAsState()
     val detalleState by reservasViewModel.reservaDetalle.collectAsState()
 
+    val sectoresState by serviciosViewModel.sectores.collectAsState()
+
     var titulo by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf<String?>(null) }
+    // HU-05: área donde ocurrió la incidencia y alerta si no estaba contratada.
+    var sectorSeleccionado by remember { mutableStateOf<Int?>(null) }
+    var alertaArea by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(numericId) {
         serviciosViewModel.loadIncidencias(numericId)
         reservasViewModel.loadReservaDetalle(numericId)
+        serviciosViewModel.loadSectores()
     }
 
     val incidencias = (incidenciasState as? NetworkResult.Success)?.data ?: emptyList()
     val reserva = (detalleState as? NetworkResult.Success)?.data
     val esSoloLectura = reserva?.estado == "Finalizado"
+    val sectores = (sectoresState as? NetworkResult.Success)?.data ?: emptyList()
+    val contratados = reserva?.sectores?.map { it.idSector }?.toSet() ?: emptySet()
+
+    if (alertaArea != null) {
+        AlertDialog(
+            onDismissRequest = { alertaArea = null },
+            icon = { Icon(Icons.Outlined.Warning, null, tint = CarpayRedText) },
+            title = { Text("Área no contratada", fontWeight = FontWeight.Bold) },
+            text = { Text(alertaArea!!) },
+            confirmButton = {
+                TextButton(onClick = { alertaArea = null }) { Text("Entendido") }
+            }
+        )
+    }
 
     Scaffold(
         topBar = { AdminTopBar() },
@@ -130,6 +151,15 @@ fun AdminBitacoraScreen(
                                 fontSize = 11.sp,
                                 color = CarpayTextSecondary
                             )
+                            if (inc.sectorNombre != null) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = if (inc.areaNoContratada) "Área: ${inc.sectorNombre} · No contratada" else "Área: ${inc.sectorNombre}",
+                                    fontSize = 12.sp,
+                                    fontWeight = if (inc.areaNoContratada) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (inc.areaNoContratada) CarpayRedText else CarpayTextSecondary
+                                )
+                            }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(inc.descripcion, fontSize = 13.sp, color = CarpayTextPrimary)
                         }
@@ -168,6 +198,36 @@ fun AdminBitacoraScreen(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
+                        if (sectores.isNotEmpty()) {
+                            Text("Área afectada (opcional)", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = CarpayTextPrimary)
+                            sectores.forEach { sector ->
+                                val seleccionado = sectorSeleccionado == sector.idSector
+                                val contratado = sector.idSector in contratados
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (seleccionado) CarpayGreenLight else CarpayWhite,
+                                    border = BorderStroke(1.dp, if (seleccionado) CarpayPrimaryGreen else CarpayInputBorder),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            sectorSeleccionado = if (seleccionado) null else sector.idSector
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(sector.nombre, fontSize = 13.sp, color = CarpayTextPrimary, modifier = Modifier.weight(1f))
+                                        Text(
+                                            text = if (contratado) "Contratada" else "No contratada",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (contratado) CarpayPrimaryGreen else CarpayRedText
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         if (errorMsg != null) {
                             Text(errorMsg!!, color = CarpayRedText, fontSize = 12.sp)
                         }
@@ -178,9 +238,15 @@ fun AdminBitacoraScreen(
                                         reservaId = numericId,
                                         titulo = titulo,
                                         descripcion = descripcion,
-                                        onSuccess = {
+                                        sectorId = sectorSeleccionado,
+                                        onSuccess = { creada ->
                                             titulo = ""
                                             descripcion = ""
+                                            sectorSeleccionado = null
+                                            if (creada?.areaNoContratada == true) {
+                                                alertaArea = creada.alerta
+                                                    ?: "El área ${creada.sectorNombre ?: ""} no forma parte de la reserva."
+                                            }
                                         },
                                         onError = { errorMsg = it }
                                     )

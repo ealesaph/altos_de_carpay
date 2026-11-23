@@ -1,4 +1,6 @@
-from django.db.models import Q
+from django.db.models import Count, Q
+from rest_framework.decorators import action
+from altosDeCarpayApp.exportacion import respuesta_exportacion
 from rest_framework import generics, mixins, status, viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -7,9 +9,13 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from altosDeCarpayApp.permissions import EsAdministrador, EsSuperusuario
+from django.utils import timezone
+from .cifrado import huella_rut
 from .models import Usuario
+from .privacidad import POLITICA_VERSION, politica_vigente, requiere_consentimiento
 from .serializers import (
     CambioPasswordSerializer,
+    ConsentimientoSerializer,
     CrearPersonalAdminSerializer,
     LoginSerializer,
     LogoutSerializer,
@@ -67,16 +73,79 @@ class CambiarPasswordView(APIView):
         return Response({"detail": "Contraseña actualizada. Vuelva a iniciar sesión."})
 
 
-class MisDatosArcoView(APIView):
-    """Derecho de Acceso (Ley N° 21.719): entrega copia estructurada de los datos personales del titular."""
+class PoliticaPrivacidadView(APIView):
+    """Deber de información (Ley N° 21.719): política pública y versionada, legible antes de registrarse."""
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        return Response(politica_vigente())
+
+
+class ConsentimientoView(APIView):
+    """Consulta y registro del consentimiento informado del titular autenticado (Ley N° 21.719)."""
 
     def get(self, request):
         usuario = request.user
         return Response({
+            "consentimiento_datos": usuario.consentimiento_datos,
+            "consentimiento_version": usuario.consentimiento_version or None,
+            "version_vigente": POLITICA_VERSION,
+            "requiere_consentimiento": requiere_consentimiento(usuario),
+        })
+
+    def post(self, request):
+        serializador = ConsentimientoSerializer(data=request.data)
+        serializador.is_valid(raise_exception=True)
+        usuario = request.user
+        usuario.consentimiento_datos = timezone.now()
+        usuario.consentimiento_version = POLITICA_VERSION
+        usuario.save(update_fields=["consentimiento_datos", "consentimiento_version"])
+        return Response({
+            "detail": "Consentimiento registrado.",
+            "consentimiento_datos": usuario.consentimiento_datos,
+            "consentimiento_version": usuario.consentimiento_version,
+            "requiere_consentimiento": False,
+        })
+
+
+class MisDatosArcoView(APIView):
+    """Derechos de Acceso y Portabilidad (Ley N° 21.719): copia estructurada y reutilizable (JSON)
+    de los datos personales del titular y de las operaciones asociadas a su cuenta."""
+
+    def get(self, request):
+        usuario = request.user
+        reservas = [
+            {
+                "id_reserva": r.id_reserva,
+                "fecha": r.fecha,
+                "hora_inicio": r.hora_inicio,
+                "horas_reservadas": r.horas_reservadas,
+                "estado": r.estado,
+                "monto_total": r.monto_total,
+                "fecha_creacion": r.fecha_creacion,
+            }
+            for r in usuario.reservas.order_by("-fecha")
+        ]
+        consultas = [
+            {
+                "id_consulta": c.id_consulta,
+                "asunto": c.asunto,
+                "mensaje": c.mensaje,
+                "fecha_envio": c.fecha_envio,
+                "estado": c.estado,
+            }
+            for c in usuario.consultas.all()
+        ]
+        return Response({
+            "fecha_emision": timezone.now(),
             "perfil": PerfilSerializer(usuario).data,
             "consentimiento_datos": usuario.consentimiento_datos,
-            "total_reservas": usuario.reservas.count(),
-            "total_consultas": usuario.consultas.count(),
+            "consentimiento_version": usuario.consentimiento_version or None,
+            "total_reservas": len(reservas),
+            "total_consultas": len(consultas),
+            "reservas": reservas,
+            "consultas": consultas,
         })
 
 
@@ -120,6 +189,21 @@ class UsuarioAdminViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
         usuario = serializador.save()
         return Response(UsuarioAdminSerializer(usuario).data, status=status.HTTP_201_CREATED)
 
+    @action(detail=False, methods=["get"], url_path="exportar")
+    def exportar(self, request):
+        """HU-08: reporte de usuarios (CSV o ?formato=xlsx). El RUT y el teléfono se descifran solo aquí."""
+        filas = (
+            (u.pk, u.nombre, u.apellido_paterno, u.apellido_materno, u.correo, u.rut, u.telefono, u.rol,
+             u.estado, u.consentimiento_datos, u.consentimiento_version or "", u.total_reservas)
+            for u in self.get_queryset().annotate(total_reservas=Count("reservas"))
+        )
+        return respuesta_exportacion(
+            "usuarios_altos_de_carpay", "Usuarios",
+            ["ID", "Nombre", "Apellido paterno", "Apellido materno", "Correo", "RUT", "Teléfono", "Rol",
+             "Estado", "Consentimiento de datos", "Versión de la política", "N° de reservas"],
+            filas, request.query_params.get("formato"),
+        )
+
     def get_queryset(self):
         consulta = Usuario.objects.all().order_by("id_usuario")
         params = self.request.query_params
@@ -131,6 +215,6 @@ class UsuarioAdminViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
         if texto:
             consulta = consulta.filter(
                 Q(correo__icontains=texto) | Q(nombre__icontains=texto)
-                | Q(apellido_paterno__icontains=texto) | Q(rut__icontains=texto)
+                | Q(apellido_paterno__icontains=texto) | Q(rut_hash=huella_rut(texto))
             )
         return consulta

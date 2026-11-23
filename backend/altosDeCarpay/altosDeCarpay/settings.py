@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 Los valores sensibles o que cambian entre desarrollo y producción se leen desde variables de
 entorno (archivo .env). Nunca escriba contraseñas ni claves en este archivo.
 """
+import base64
+import hashlib
 import os
 from datetime import timedelta
 from decimal import Decimal
@@ -46,6 +48,24 @@ if not SECRET_KEY:
     else:
         raise ImproperlyConfigured('Defina la variable de entorno DJANGO_SECRET_KEY.')
 
+# Clave del cifrado en reposo de datos personales (RUT y teléfono). Generar con:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Respaldarla aparte: si se pierde, esos campos no se pueden leer. Para cambiarla, mover la clave
+# actual a FIELD_ENCRYPTION_KEYS_ANTERIORES y ejecutar `python manage.py recifrar_datos_personales`.
+_CLAVE_DERIVADA = base64.urlsafe_b64encode(
+    hashlib.sha256(('cifrado-campos:' + SECRET_KEY).encode()).digest()
+).decode()
+FIELD_ENCRYPTION_KEY = os.environ.get('FIELD_ENCRYPTION_KEY', '')
+if not FIELD_ENCRYPTION_KEY:
+    if DEBUG:
+        FIELD_ENCRYPTION_KEY = _CLAVE_DERIVADA  # solo desarrollo
+    else:
+        raise ImproperlyConfigured('Defina la variable de entorno FIELD_ENCRYPTION_KEY.')
+FIELD_ENCRYPTION_KEYS_ANTERIORES = env_lista('FIELD_ENCRYPTION_KEYS_ANTERIORES')
+if FIELD_ENCRYPTION_KEY != _CLAVE_DERIVADA:
+    # Permite leer lo cifrado con la clave de desarrollo hasta ejecutar recifrar_datos_personales.
+    FIELD_ENCRYPTION_KEYS_ANTERIORES.append(_CLAVE_DERIVADA)
+
 ALLOWED_HOSTS = env_lista('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,10.0.2.2,backend')
 ADMIN_URL = os.environ.get('ADMIN_URL', 'admin/')
 
@@ -78,6 +98,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if not DEBUG:
+    # En producción Gunicorn no sirve archivos estáticos: WhiteNoise entrega los del panel de administración.
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 ROOT_URLCONF = 'altosDeCarpay.urls'
 WSGI_APPLICATION = 'altosDeCarpay.wsgi.application'

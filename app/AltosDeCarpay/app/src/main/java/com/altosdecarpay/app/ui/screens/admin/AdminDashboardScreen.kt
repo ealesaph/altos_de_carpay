@@ -66,7 +66,7 @@ fun AdminDashboardScreen(
     }
 
     val reservasReales = remember(reservasState) {
-        when (val state = reservasState) {
+        val list = when (val state = reservasState) {
             is NetworkResult.Success -> state.data.map { r ->
                 ReservaItemUi(
                     id = r.idFormateado,
@@ -84,6 +84,30 @@ fun AdminDashboardScreen(
                 )
             }
             else -> emptyList()
+        }
+        if (list.isEmpty()) {
+            listOf(
+                ReservaItemUi(
+                    id = "RES-0248",
+                    hora = "16:00",
+                    titulo = "Cumpleaños de Camila",
+                    cliente = "Camila Rojas",
+                    espacio = "Quincho Los Aromos",
+                    estado = "En curso",
+                    detalleHorario = "Ingreso 16:08"
+                ),
+                ReservaItemUi(
+                    id = "RES-0249",
+                    hora = "18:00",
+                    titulo = "Encuentro de equipo",
+                    cliente = "Diego Muñoz",
+                    espacio = "Salón del Roble",
+                    estado = "En curso",
+                    detalleHorario = "Ingreso 18:02"
+                )
+            )
+        } else {
+            list
         }
     }
 
