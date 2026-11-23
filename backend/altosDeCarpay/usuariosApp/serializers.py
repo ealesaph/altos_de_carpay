@@ -1,10 +1,13 @@
+import hashlib
 import logging
+from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.signals import user_logged_in
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from rest_framework import serializers
-from rest_framework.exceptions import AuthenticationFailed
+from django.core.cache import cache
+from rest_framework.exceptions import AuthenticationFailed, Throttled
 from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -179,14 +182,32 @@ class LoginSerializer(TokenObtainPairSerializer):
         token["is_superuser"] = usuario.is_superuser
         return token
 
+    @staticmethod
+    def _clave_intentos(correo):
+        # Bloqueo por cuenta (no por IP): no se evita cambiando la cabecera X-Forwarded-For.
+        huella = hashlib.sha256(str(correo or "").strip().lower().encode()).hexdigest()
+        return f"login-fallido:{huella}"
+
     def validate(self, atributos):
         peticion = self.context.get("request")
+        clave = self._clave_intentos(atributos.get(self.username_field))
+        if cache.get(clave, 0) >= settings.LOGIN_MAX_INTENTOS:
+            raise Throttled(
+                wait=settings.LOGIN_BLOQUEO_MINUTOS * 60,
+                detail=(f"Cuenta bloqueada temporalmente por {settings.LOGIN_MAX_INTENTOS} intentos fallidos. "
+                        f"Intenta nuevamente en {settings.LOGIN_BLOQUEO_MINUTOS} minutos."),
+            )
         try:
             datos = super().validate(atributos)
         except AuthenticationFailed:
             ip = peticion.META.get("REMOTE_ADDR", "desconocida") if peticion else "desconocida"
             seguridad.warning("Intento de acceso fallido desde la IP %s", ip)
+            intentos = cache.get(clave, 0) + 1
+            cache.set(clave, intentos, settings.LOGIN_BLOQUEO_MINUTOS * 60)
+            if intentos >= settings.LOGIN_MAX_INTENTOS:
+                seguridad.warning("Cuenta bloqueada temporalmente tras %s intentos fallidos", intentos)
             raise
+        cache.delete(clave)
         user_logged_in.send(sender=type(self.user), request=peticion, user=self.user)
         datos["usuario"] = {
             "id_usuario": self.user.pk,

@@ -23,6 +23,8 @@ import {
   Shield,
 } from 'lucide-react';
 import defaultSpaceImg from '../assets/default-space.svg';
+import { useConfirmacion } from '../components/ConfirmDialog.jsx';
+import { formatoCLP, formatoFechaHora } from '../reglas.js';
 import {
   cancelReservation,
   changeReservationStatus,
@@ -32,11 +34,14 @@ import {
   exportarReporte,
   getConsultas,
   getProfile,
+  getReservationSummary,
   getReservations,
   getSectors,
   getUsers,
   hasSession,
   logout,
+  previewCancellation,
+  registerRefund,
   replyConsulta,
   sendReservationEmail,
   updateSector,
@@ -46,11 +51,23 @@ import {
 
 const TRANSICIONES_ESTADO = {
   Pendiente: ['Confirmado'],
-  Confirmado: ['En Proceso'],
+  Confirmado: ['En Proceso', 'No se presentó'],
   'En Proceso': ['Finalizado'],
   Finalizado: [],
   Cancelado: [],
+  'No se presentó': [],
 };
+
+const ESTADOS_VIGENTES = ['Pendiente', 'Confirmado', 'En Proceso'];
+
+function hoyISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function esProxima(reserva) {
+  return ESTADOS_VIGENTES.includes(reserva.estado) && reserva.fecha >= hoyISO();
+}
 
 export default function AdminDashboard() {
   const [seccionActiva, setSeccionActiva] = useState('dashboard');
@@ -90,7 +107,9 @@ export default function AdminDashboard() {
   const [procesandoUsuarioId, setProcesandoUsuarioId] = useState(null);
 
   const [busqueda, setBusqueda] = useState('');
-  const [filtroReserva, setFiltroReserva] = useState('Todas');
+  const [filtroReserva, setFiltroReserva] = useState('Próximas');
+  const [resumen, setResumen] = useState(null);
+  const [dialogo, confirmar] = useConfirmacion();
   const [reservaExpandidaId, setReservaExpandidaId] = useState(null);
   const [procesandoReservaId, setProcesandoReservaId] = useState(null);
   const [metodoPagoManual, setMetodoPagoManual] = useState('Transferencia');
@@ -101,13 +120,15 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const cargarTodo = async () => {
-    const [reservasApi, sectoresApi, consultasApi, perfilApi, usuariosApi] = await Promise.all([
+    const [reservasApi, sectoresApi, consultasApi, perfilApi, usuariosApi, resumenApi] = await Promise.all([
       getReservations(),
       getSectors(),
       getConsultas(),
       getProfile(),
       getUsers(),
+      getReservationSummary(),
     ]);
+    setResumen(resumenApi);
     setReservas(reservasApi);
     setSectores(sectoresApi);
     setConsultas(consultasApi);
@@ -150,14 +171,28 @@ export default function AdminDashboard() {
     setMensajeExito(texto);
   };
 
-  const reservasVisibles = reservas.filter((reserva) => {
-    const texto = `${reserva.id_reserva} ${reserva.cliente} ${reserva.correo_cliente}`.toLowerCase();
-    if (!texto.includes(busqueda.toLowerCase())) return false;
-    if (filtroReserva === 'Con saldo') return Number(reserva.saldo_pendiente) > 0;
-    if (filtroReserva === 'Pendiente') return reserva.estado === 'Pendiente';
-    if (filtroReserva === 'Confirmado') return reserva.estado === 'Confirmado';
-    return true;
-  });
+  const FILTROS_RESERVA = {
+    Próximas: esProxima,
+    Todas: () => true,
+    'Con saldo': (r) => ESTADOS_VIGENTES.includes(r.estado) && Number(r.saldo_pendiente) > 0,
+    Pendiente: (r) => r.estado === 'Pendiente',
+    Confirmado: (r) => r.estado === 'Confirmado',
+    'No se presentó': (r) => r.estado === 'No se presentó',
+    Cancelado: (r) => r.estado === 'Cancelado',
+  };
+
+  const reservasVisibles = reservas
+    .filter((reserva) => {
+      const texto = `${reserva.id_reserva} ${reserva.cliente} ${reserva.correo_cliente}`.toLowerCase();
+      if (!texto.includes(busqueda.toLowerCase())) return false;
+      return (FILTROS_RESERVA[filtroReserva] || FILTROS_RESERVA.Todas)(reserva);
+    })
+    .sort((a, b) => {
+      // Las próximas se leen en orden cronológico; el historial, de la más reciente a la más antigua.
+      const claveA = `${a.fecha} ${a.hora_inicio}`;
+      const claveB = `${b.fecha} ${b.hora_inicio}`;
+      return filtroReserva === 'Próximas' ? claveA.localeCompare(claveB) : claveB.localeCompare(claveA);
+    });
 
   const consultasVisibles = consultas.filter((consulta) => {
     if (filtroConsulta === 'Pendiente') return consulta.estado === 'Pendiente';
@@ -165,10 +200,7 @@ export default function AdminDashboard() {
     return true;
   });
 
-  const saldoPorCobrar = reservas.reduce(
-    (total, reserva) => total + Number(reserva.saldo_pendiente),
-    0,
-  );
+  const saldoPorCobrar = Number(resumen?.saldo_por_cobrar || 0);
   const sectorActual = sectores.find((s) => s.id_sector === sectorEditandoId);
 
   const guardarSector = async (event) => {
@@ -204,8 +236,12 @@ export default function AdminDashboard() {
     setProcesandoReservaId(id);
     try {
       await accion();
-      const reservasActualizadas = await getReservations();
+      const [reservasActualizadas, resumenActualizado] = await Promise.all([
+        getReservations(),
+        getReservationSummary(),
+      ]);
       setReservas(reservasActualizadas);
+      setResumen(resumenActualizado);
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -213,27 +249,111 @@ export default function AdminDashboard() {
     }
   };
 
-  const manejarPagoManual = (reserva) =>
-    ejecutarAccionReserva(reserva.id_reserva, async () => {
-      const tipo = Number(reserva.monto_pagado) > 0 ? 'Saldo' : 'Anticipo';
+  const manejarPagoManual = async (reserva) => {
+    const tipo = Number(reserva.monto_pagado) > 0 ? 'Saldo' : 'Anticipo';
+    const monto = tipo === 'Saldo' ? reserva.saldo_pendiente : reserva.monto_anticipo;
+    const acepta = await confirmar({
+      titulo: `¿Registrar ${tipo.toLowerCase()} de RES-${reserva.id_reserva}?`,
+      mensaje: (
+        <p>
+          Se registrará un pago de <strong>{formatoCLP(monto)}</strong> por {metodoPagoManual.toLowerCase()} a nombre de{' '}
+          {reserva.cliente}. Un pago registrado no se puede eliminar.
+        </p>
+      ),
+      textoConfirmar: 'Registrar pago',
+    });
+    if (!acepta) return;
+    return ejecutarAccionReserva(reserva.id_reserva, async () => {
       await createPayment(reserva.id_reserva, {
         tipo_pago: tipo,
         metodo_pago: metodoPagoManual,
       });
       notificar(`Pago (${tipo} · ${metodoPagoManual}) registrado en reserva RES-${reserva.id_reserva}.`);
     });
+  };
 
-  const manejarCambioEstado = (reserva, nuevoEstado) =>
-    ejecutarAccionReserva(reserva.id_reserva, async () => {
+  const manejarCambioEstado = async (reserva, nuevoEstado) => {
+    const detalle = {
+      'En Proceso': 'Se registrará la llegada del cliente. Solo es posible el día del evento, desde 1 hora antes.',
+      Finalizado: 'La reserva quedará cerrada y su bitácora pasará a solo lectura.',
+      'No se presentó': 'La reserva se cerrará sin asistencia y se conservará el anticipo pagado.',
+      Confirmado: 'La reserva quedará confirmada aunque el anticipo no se haya pagado en el sistema.',
+    }[nuevoEstado];
+    const acepta = await confirmar({
+      titulo: `¿Pasar RES-${reserva.id_reserva} a «${nuevoEstado}»?`,
+      mensaje: <p>{detalle} Este cambio no se puede deshacer.</p>,
+      textoConfirmar: `Pasar a ${nuevoEstado}`,
+    });
+    if (!acepta) return;
+    return ejecutarAccionReserva(reserva.id_reserva, async () => {
       await changeReservationStatus(reserva.id_reserva, nuevoEstado);
       notificar(`Reserva RES-${reserva.id_reserva} actualizada a «${nuevoEstado}».`);
     });
+  };
 
-  const manejarCancelarReserva = (reserva) =>
-    ejecutarAccionReserva(reserva.id_reserva, async () => {
-      await cancelReservation(reserva.id_reserva);
-      notificar(`Reserva RES-${reserva.id_reserva} cancelada.`);
+  const manejarCancelarReserva = async (reserva) => {
+    setError('');
+    let porCliente;
+    let porRecinto;
+    try {
+      [porCliente, porRecinto] = await Promise.all([
+        previewCancellation(reserva.id_reserva, 'Cliente'),
+        previewCancellation(reserva.id_reserva, 'Recinto'),
+      ]);
+    } catch (requestError) {
+      setError(requestError.message);
+      return;
+    }
+    let origen = 'Cliente';
+    const acepta = await confirmar({
+      titulo: `¿Cancelar la reserva RES-${reserva.id_reserva}?`,
+      mensaje: (
+        <p>
+          Cliente: {reserva.cliente} · Pagado: <strong>{formatoCLP(porCliente.monto_pagado)}</strong>. La cancelación no se
+          puede deshacer. Indica quién cancela para calcular la devolución:
+        </p>
+      ),
+      contenido: (
+        <fieldset className="space-y-2 text-sm">
+          {[['Cliente', 'El arrendatario', porCliente], ['Recinto', 'Altos de Carpay', porRecinto]].map(([valor, etiqueta, sim]) => (
+            <label key={valor} className="flex items-start gap-2 p-3 rounded-xl border border-sand-200">
+              <input type="radio" name="origen-cancelacion" defaultChecked={valor === 'Cliente'} onChange={() => { origen = valor; }} className="mt-1" />
+              <span>
+                <strong>{etiqueta}</strong> · devolución {formatoCLP(sim.monto_devolucion)}
+                <span className="block text-xs text-gray-500">{sim.regla}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      ),
+      textoConfirmar: 'Cancelar reserva',
+      textoCancelar: 'Volver',
+      peligro: true,
     });
+    if (!acepta) return;
+    return ejecutarAccionReserva(reserva.id_reserva, async () => {
+      const cancelada = await cancelReservation(reserva.id_reserva, origen);
+      notificar(`Reserva RES-${reserva.id_reserva} cancelada. Devolución a registrar: ${formatoCLP(cancelada.monto_devolucion)}.`);
+    });
+  };
+
+  const manejarRegistrarDevolucion = async (reserva) => {
+    const acepta = await confirmar({
+      titulo: `¿Registrar la devolución de RES-${reserva.id_reserva}?`,
+      mensaje: (
+        <p>
+          Confirma que ya transferiste <strong>{formatoCLP(reserva.monto_devolucion)}</strong> a {reserva.cliente}. El registro
+          no se puede deshacer.
+        </p>
+      ),
+      textoConfirmar: 'Registrar devolución',
+    });
+    if (!acepta) return;
+    return ejecutarAccionReserva(reserva.id_reserva, async () => {
+      await registerRefund(reserva.id_reserva);
+      notificar(`Devolución de RES-${reserva.id_reserva} registrada.`);
+    });
+  };
 
   const manejarReenviarCorreo = (reserva) =>
     ejecutarAccionReserva(reserva.id_reserva, async () => {
@@ -310,6 +430,20 @@ export default function AdminDashboard() {
   };
 
   const manejarActualizarUsuario = async (usuario, changes) => {
+    const descripcion = changes.rol
+      ? (changes.rol === 'Admin'
+        ? `${usuario.correo} tendrá acceso al panel de administración.`
+        : `${usuario.correo} perderá el acceso al panel de administración.`)
+      : (changes.estado === 'Inactivo'
+        ? `${usuario.correo} no podrá iniciar sesión hasta que se reactive.`
+        : `${usuario.correo} podrá volver a iniciar sesión.`);
+    const acepta = await confirmar({
+      titulo: changes.rol ? '¿Cambiar los permisos de este usuario?' : '¿Cambiar el estado de esta cuenta?',
+      mensaje: <p>{descripcion}</p>,
+      textoConfirmar: 'Confirmar cambio',
+      peligro: changes.rol === 'Admin' || changes.estado === 'Inactivo',
+    });
+    if (!acepta) return;
     setError('');
     setMensajeExito('');
     setProcesandoUsuarioId(usuario.id_usuario);
@@ -331,6 +465,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-sand-50 flex font-sans text-gray-800 antialiased">
+      {dialogo}
 
       {/* 1. SIDEBAR LATERAL (Verde institucional) */}
       <aside className="w-64 bg-forest-900 text-white flex flex-col justify-between p-6 shrink-0 hidden md:flex">
@@ -536,18 +671,18 @@ export default function AdminDashboard() {
 
           {/* Tarjetas de Métricas (Quick Menu interactivo) */}
           {mostrarTodo && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <button
                 type="button"
                 onClick={() => {
                   setSeccionActiva('reservas');
-                  setFiltroReserva('Todas');
+                  setFiltroReserva('Próximas');
                 }}
                 className="text-left bg-white p-5 rounded-2xl border border-sand-200/80 shadow-sm hover:border-forest-700 hover:shadow-md transition-all"
               >
-                <span className="text-3xl font-serif font-bold text-forest-900 block">{reservas.length}</span>
-                <span className="text-xs font-semibold text-gray-700 mt-1 block">Reservas</span>
-                <span className="text-[10px] text-forest-700">Ver todas →</span>
+                <span className="text-3xl font-serif font-bold text-forest-900 block">{resumen?.proximas ?? '–'}</span>
+                <span className="text-xs font-semibold text-gray-700 mt-1 block">Próximas reservas</span>
+                <span className="text-[10px] text-forest-700">{resumen?.total_reservas ?? 0} en total →</span>
               </button>
 
               <button
@@ -558,14 +693,26 @@ export default function AdminDashboard() {
                 }}
                 className="text-left bg-white p-5 rounded-2xl border border-sand-200/80 shadow-sm hover:border-forest-700 hover:shadow-md transition-all"
               >
-                <span className="text-3xl font-serif font-bold text-forest-900 block">
+                <span className="text-2xl font-serif font-bold text-forest-900 block break-all">
                   ${saldoPorCobrar.toLocaleString('es-CL')}
                 </span>
                 <span className="text-xs font-semibold text-gray-700 mt-1 block">Saldo por cobrar</span>
                 <span className="text-[10px] text-forest-700">
-                  {reservas.filter((r) => Number(r.saldo_pendiente) > 0).length} con saldo →
+                  {resumen?.reservas_con_saldo ?? 0} reservas vigentes →
                 </span>
               </button>
+
+              <div className="text-left bg-white p-5 rounded-2xl border border-sand-200/80 shadow-sm">
+                <span className="text-2xl font-serif font-bold text-forest-900 block break-all">
+                  {formatoCLP(resumen?.cobrado_mes)}
+                </span>
+                <span className="text-xs font-semibold text-gray-700 mt-1 block">Cobrado este mes</span>
+                <span className="text-[10px] text-gray-500">
+                  {Number(resumen?.devoluciones_pendientes || 0) > 0
+                    ? `${resumen.devoluciones_pendientes} devolución(es) pendiente(s): ${formatoCLP(resumen.monto_devoluciones_pendientes)}`
+                    : 'Pagos aprobados del mes'}
+                </span>
+              </div>
 
               <button
                 type="button"
@@ -601,7 +748,12 @@ export default function AdminDashboard() {
             <div className="bg-white rounded-3xl border border-sand-200/80 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-sand-100 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div>
-                  <h2 className="font-serif text-xl font-semibold text-forest-900">Próximas reservas</h2>
+                  <h2 className="font-serif text-xl font-semibold text-forest-900">
+                    {filtroReserva === 'Próximas' ? 'Próximas reservas' : 'Reservas'}
+                  </h2>
+                  <p className="text-[11px] text-gray-500">
+                    {filtroReserva === 'Próximas' ? 'Desde hoy, de la más cercana a la más lejana.' : 'Historial completo con el filtro elegido.'}
+                  </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 text-xs">
                   <span className="text-gray-500">Exportar a Excel:</span>
@@ -643,11 +795,15 @@ export default function AdminDashboard() {
 
                 <div className="flex flex-wrap gap-2">
                   {[
-                    ['Todas', `Todas · ${reservas.length}`],
-                    ['Con saldo', `Con saldo · ${reservas.filter((r) => Number(r.saldo_pendiente) > 0).length}`],
-                    ['Pendiente', `Pendientes · ${reservas.filter((r) => r.estado === 'Pendiente').length}`],
-                    ['Confirmado', `Confirmadas · ${reservas.filter((r) => r.estado === 'Confirmado').length}`],
-                  ].map(([clave, etiqueta]) => (
+                    ['Próximas', 'Próximas'],
+                    ['Todas', 'Todas'],
+                    ['Con saldo', 'Con saldo'],
+                    ['Pendiente', 'Pendientes'],
+                    ['Confirmado', 'Confirmadas'],
+                    ['No se presentó', 'No se presentó'],
+                    ['Cancelado', 'Canceladas'],
+                  ].map(([clave, nombre]) => [clave, `${nombre} · ${reservas.filter(FILTROS_RESERVA[clave]).length}`])
+                    .map(([clave, etiqueta]) => (
                     <button
                       key={clave}
                       type="button"
@@ -738,7 +894,24 @@ export default function AdminDashboard() {
                                   </div>
 
                                   <div className="flex flex-wrap items-center gap-2">
-                                    {Number(reserva.saldo_pendiente) > 0 && reserva.estado !== 'Cancelado' && (
+                                    {reserva.estado === 'Cancelado' && (
+                                      <span className="text-xs text-gray-700">
+                                        Cancelada por {reserva.cancelada_por === 'Recinto' ? 'Altos de Carpay' : 'el cliente'} ·
+                                        devolución {formatoCLP(reserva.monto_devolucion)}
+                                        {reserva.devolucion_realizada_en && ` · realizada el ${formatoFechaHora(reserva.devolucion_realizada_en)}`}
+                                      </span>
+                                    )}
+                                    {reserva.estado === 'Cancelado' && Number(reserva.monto_devolucion) > 0 && !reserva.devolucion_realizada_en && (
+                                      <button
+                                        type="button"
+                                        disabled={ocupada}
+                                        onClick={() => manejarRegistrarDevolucion(reserva)}
+                                        className="inline-flex items-center gap-1 bg-white border border-forest-800 text-forest-900 px-3 py-1.5 rounded-lg font-semibold hover:bg-forest-50 disabled:opacity-50"
+                                      >
+                                        <CreditCard size={13} /> Registrar devolución
+                                      </button>
+                                    )}
+                                    {Number(reserva.saldo_pendiente) > 0 && ['Pendiente', 'Confirmado', 'En Proceso', 'Finalizado'].includes(reserva.estado) && (
                                       <div className="flex items-center gap-1 bg-white border border-sand-200 rounded-lg p-1">
                                         <select
                                           value={metodoPagoManual}
@@ -781,7 +954,7 @@ export default function AdminDashboard() {
                                       <Mail size={13} /> Enviar correo
                                     </button>
 
-                                    {!['Cancelado', 'En Proceso', 'Finalizado'].includes(reserva.estado) && (
+                                    {!['Cancelado', 'En Proceso', 'Finalizado', 'No se presentó'].includes(reserva.estado) && (
                                       <button
                                         type="button"
                                         disabled={ocupada}
@@ -1024,7 +1197,9 @@ export default function AdminDashboard() {
                               >
                                 <div>
                                   <span className="font-semibold text-forest-900 block">{c.asunto}</span>
-                                  <span className="text-[11px] text-gray-500">{c.cliente_nombre}</span>
+                                  <span className="text-[11px] text-gray-500">
+                                    {c.cliente_nombre}{c.correo_respuesta ? ` · ${c.correo_respuesta}` : ''}{!c.cliente ? ' · sin cuenta' : ''}
+                                  </span>
                                 </div>
                                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
                                   c.estado === 'Respondida' ? 'bg-forest-100 text-forest-800' : 'bg-amber-100 text-amber-800'
@@ -1053,6 +1228,17 @@ export default function AdminDashboard() {
                                         type="button"
                                         disabled={respondiendoId === c.id_consulta || !(respuestas[c.id_consulta] || '').trim()}
                                         onClick={async () => {
+                                          const acepta = await confirmar({
+                                            titulo: '¿Enviar esta respuesta?',
+                                            mensaje: (
+                                              <p>
+                                                Se enviará a {c.correo_respuesta || 'la persona'} y la consulta quedará cerrada. No se
+                                                puede editar después.
+                                              </p>
+                                            ),
+                                            textoConfirmar: 'Enviar respuesta',
+                                          });
+                                          if (!acepta) return;
                                           setRespondiendoId(c.id_consulta);
                                           try {
                                             const actualizada = await replyConsulta(c.id_consulta, respuestas[c.id_consulta]);

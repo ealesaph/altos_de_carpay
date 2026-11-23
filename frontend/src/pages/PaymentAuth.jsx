@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Check, ArrowRight, XCircle, CheckCircle } from 'lucide-react';
 import { createPayment, getReservation } from '../api.js';
 import defaultSpaceImg from '../assets/default-space.svg';
+import Footer from '../components/Footer.jsx';
 
 export default function PaymentAuth() {
   const navigate = useNavigate();
@@ -245,18 +246,7 @@ export default function PaymentAuth() {
         </div>
       </main>
 
-      <footer className="bg-forest-900 text-white py-10 border-t border-forest-800 mt-16 text-xs text-gray-400">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2 text-white font-serif font-bold text-base">
-            <span>🍃</span> Altos de carpay
-          </div>
-          <div className="flex gap-6">
-            <a href="#" className="hover:underline">Condiciones de reserva</a>
-            <a href="#" className="hover:underline">Privacidad</a>
-            <a href="#" className="hover:underline">Contacto</a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
     </div>
   );

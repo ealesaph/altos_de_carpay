@@ -303,7 +303,7 @@ export default function Register() {
       {/* Footer minimalista */}
       <footer className="max-w-6xl w-full mx-auto flex flex-col sm:flex-row justify-between items-center text-[11px] text-gray-400 border-t border-sand-200/60 pt-4 gap-2">
         <span>Naturaleza para celebrar y compartir.</span>
-        <a href="#" className="hover:underline">Política de privacidad ↗</a>
+        <Link to="/privacidad" className="hover:underline">Política de privacidad ↗</Link>
       </footer>
 
     </div>

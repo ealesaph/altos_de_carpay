@@ -86,6 +86,11 @@ class ReservaCrearSerializer(serializers.Serializer):
         return items
 
     def validate(self, datos):
+        horas = max(item["horas"] for item in datos["sectores"])
+        try:
+            services.validar_bloque_horario(datos["hora_inicio"], horas)
+        except Exception as error:  # ValidationError de DRF con el campo que corresponde
+            raise serializers.ValidationError(getattr(error, "detail", str(error)))
         solicitante = self.context["request"].user
         if solicitante.es_admin:
             datos["titular"] = datos.pop("cliente", solicitante)
@@ -100,6 +105,23 @@ class ReservaCrearSerializer(serializers.Serializer):
             usuario=datos["titular"], fecha=datos["fecha"], hora_inicio=datos["hora_inicio"],
             sectores=datos["sectores"], servicios=datos.get("servicios", []),
         )
+
+class ReservaModificarSerializer(ReservaCrearSerializer):
+    """Mismos datos que al crear; se aplica sobre la reserva existente (sin titular nuevo)."""
+
+    def validate(self, datos):
+        datos.pop("cliente", None)
+        horas = max(item["horas"] for item in datos["sectores"])
+        try:
+            services.validar_bloque_horario(datos["hora_inicio"], horas)
+        except Exception as error:
+            raise serializers.ValidationError(getattr(error, "detail", str(error)))
+        return datos
+
+
+class CancelacionSerializer(serializers.Serializer):
+    origen = serializers.ChoiceField(choices=Reserva.OrigenCancelacion.choices, required=False)
+
 
 class PagoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -140,6 +162,7 @@ class ReservaDetalleSerializer(serializers.ModelSerializer):
     monto_pagado = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     saldo_pendiente = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     plazo_anticipo_vence = serializers.DateTimeField(read_only=True)
+    plazo_saldo_vence = serializers.DateTimeField(read_only=True)
     sectores = SectorReservadoSerializer(source="sectores_reservados", many=True, read_only=True)
     servicios = ServicioReservadoSerializer(source="servicios_reservados", many=True, read_only=True)
     pagos = PagoSerializer(many=True, read_only=True)
@@ -148,8 +171,9 @@ class ReservaDetalleSerializer(serializers.ModelSerializer):
         model = Reserva
         fields = ["id_reserva", "usuario", "cliente", "correo_cliente", "fecha", "hora_inicio", "hora_fin",
                   "horas_reservadas", "estado", "monto_total", "monto_anticipo", "monto_pagado",
-                  "saldo_pendiente", "plazo_anticipo_vence", "fecha_creacion", "token_qr",
-                  "sectores", "servicios", "pagos"]
+                  "saldo_pendiente", "plazo_anticipo_vence", "plazo_saldo_vence", "fecha_creacion",
+                  "token_qr", "cancelada_por", "fecha_cancelacion", "monto_devolucion",
+                  "devolucion_realizada_en", "sectores", "servicios", "pagos"]
         read_only_fields = fields
 
     def get_hora_fin(self, reserva):

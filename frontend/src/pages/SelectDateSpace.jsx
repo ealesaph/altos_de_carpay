@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Calendar as CalendarIcon, Clock, ArrowRight } from 'lucide-react';
-import { createReservation, getSectors, getServices, hasSession } from '../api.js';
+import { createReservation, getSectors, getServices, hasSession, updateReservationSelection } from '../api.js';
+import { horaTermino, horasDeInicio, maximoHoras, textoBloques } from '../reglas.js';
 import defaultSpaceImg from '../assets/default-space.svg';
 
 function fechaMinima() {
@@ -16,14 +17,21 @@ function fechaMinima() {
 
 export default function SelectDateSpace() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // «Editar selección» llega con la reserva pendiente: se precarga y al guardar se modifica esa misma reserva.
+  const reservaEditada = location.state?.editar || null;
   const [sectores, setSectores] = useState([]);
   const [servicios, setServicios] = useState([]);
-  const [serviciosSeleccionados, setServiciosSeleccionados] = useState({});
-  const [sectorSeleccionado, setSectorSeleccionado] = useState('');
-  const [fecha, setFecha] = useState(fechaMinima);
-  const [horaInicio, setHoraInicio] = useState('13:00');
-  const [horas, setHoras] = useState(5);
-  const [aceptaCondiciones, setAceptaCondiciones] = useState(false);
+  const [serviciosSeleccionados, setServiciosSeleccionados] = useState(() =>
+    Object.fromEntries((reservaEditada?.servicios || []).map((s) => [s.id_servicio, s.cantidad])),
+  );
+  const [sectorSeleccionado, setSectorSeleccionado] = useState(
+    reservaEditada?.sectores?.[0] ? String(reservaEditada.sectores[0].id_sector) : '',
+  );
+  const [fecha, setFecha] = useState(reservaEditada?.fecha || fechaMinima());
+  const [horaInicio, setHoraInicio] = useState(String(reservaEditada?.hora_inicio || '13:00').slice(0, 5));
+  const [horas, setHoras] = useState(Number(reservaEditada?.horas_reservadas || 5));
+  const [aceptaCondiciones, setAceptaCondiciones] = useState(Boolean(reservaEditada));
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
@@ -34,7 +42,9 @@ export default function SelectDateSpace() {
         const disponibles = catalogo.filter((sector) => sector.estado === 'Disponible');
         setSectores(disponibles);
         setServicios((listaServicios || []).filter((s) => s.estado === 'Activo'));
-        if (disponibles.length) setSectorSeleccionado(String(disponibles[0].id_sector));
+        if (disponibles.length) {
+          setSectorSeleccionado((actual) => actual || String(disponibles[0].id_sector));
+        }
       })
       .catch((requestError) => setError(requestError.message))
       .finally(() => setCargando(false));
@@ -49,6 +59,12 @@ export default function SelectDateSpace() {
     return acc + (cant > 0 ? Number(srv.valor) * cant : 0);
   }, 0);
   const precioTotal = precioArriendo + precioExtras;
+  const horasMaximas = maximoHoras(horaInicio);
+
+  const cambiarHoraInicio = (valor) => {
+    setHoraInicio(valor);
+    setHoras((actual) => Math.min(Number(actual), maximoHoras(valor)));
+  };
 
   const toggleServicio = (idServicio) => {
     setServiciosSeleccionados((prev) => {
@@ -69,8 +85,8 @@ export default function SelectDateSpace() {
       return;
     }
     const horasNumero = Number(horas);
-    if (!Number.isInteger(horasNumero) || horasNumero < 1 || horasNumero > 24) {
-      setError('Ingresa una cantidad entera de horas entre 1 y 24.');
+    if (!Number.isInteger(horasNumero) || horasNumero < 1 || horasNumero > horasMaximas) {
+      setError(`Desde las ${horaInicio} puedes reservar entre 1 y ${horasMaximas} horas.`);
       return;
     }
     if (!aceptaCondiciones) {
@@ -84,13 +100,16 @@ export default function SelectDateSpace() {
         .filter(([, cant]) => Number(cant) > 0)
         .map(([idSrv, cant]) => ({ servicio: Number(idSrv), cantidad: Number(cant) }));
 
-      const reserva = await createReservation({
+      const datos = {
         fecha,
         hora_inicio: horaInicio,
         sectores: [{ sector: sectorActual.id_sector, horas: Number(horas) }],
         servicios: serviciosPayload,
         acepta_condiciones: aceptaCondiciones,
-      });
+      };
+      const reserva = reservaEditada
+        ? await updateReservationSelection(reservaEditada.id_reserva, datos)
+        : await createReservation(datos);
       navigate('/reservar/pago', {
         state: {
           ...reserva,
@@ -127,10 +146,10 @@ export default function SelectDateSpace() {
             Paso 1 · Reserva
           </span>
           <h1 className="font-serif text-3xl md:text-4xl text-forest-900 mt-1">
-            Selecciona tu espacio y fecha
+            {reservaEditada ? `Editar reserva N° ${reservaEditada.id_reserva}` : 'Selecciona tu espacio y fecha'}
           </h1>
           <p className="text-sm text-gray-500 mt-2">
-            Los espacios y precios se consultan directamente desde el catálogo del sistema.
+            Horario de arriendo: {textoBloques()}. Se reserva por horas completas.
           </p>
         </div>
 
@@ -190,33 +209,30 @@ export default function SelectDateSpace() {
                 <label className="text-sm font-medium text-gray-700 block mb-2">
                   <Clock size={15} className="inline mr-1" /> Hora de inicio
                 </label>
-                <input
-                  type="time"
+                <select
                   required
                   value={horaInicio}
-                  onChange={(event) => setHoraInicio(event.target.value)}
-                  className="w-full border border-sand-200 rounded-xl p-3"
-                />
+                  onChange={(event) => cambiarHoraInicio(event.target.value)}
+                  className="w-full border border-sand-200 rounded-xl p-3 bg-white"
+                >
+                  {horasDeInicio().map((opcion) => (
+                    <option key={opcion.valor} value={opcion.valor}>{opcion.etiqueta}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-2">Horas</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={2}
+                <select
                   required
                   value={horas}
-                  onKeyDown={(event) => {
-                    if (event.ctrlKey || event.metaKey || event.altKey) return;
-                    const teclasPermitidas = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'];
-                    if (!teclasPermitidas.includes(event.key) && !/^\d$/.test(event.key)) {
-                      event.preventDefault();
-                    }
-                  }}
-                  onChange={(event) => setHoras(event.target.value.replace(/\D/g, ''))}
-                  className="w-full border border-sand-200 rounded-xl p-3"
-                />
+                  onChange={(event) => setHoras(Number(event.target.value))}
+                  className="w-full border border-sand-200 rounded-xl p-3 bg-white"
+                >
+                  {Array.from({ length: horasMaximas }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>{n} {n === 1 ? 'hora' : 'horas'}</option>
+                  ))}
+                </select>
+                <span className="text-[11px] text-gray-500 block mt-1">Termina a las {horaTermino(horaInicio, horas)}</span>
               </div>
             </div>
             {servicios.length > 0 && (
@@ -266,7 +282,12 @@ export default function SelectDateSpace() {
                 onChange={(event) => setAceptaCondiciones(event.target.checked)}
                 className="mt-1"
               />
-              Acepto las condiciones de arriendo y la política de cancelación.
+              <span>
+                Acepto las{' '}
+                <Link to="/condiciones" target="_blank" className="text-forest-800 font-semibold underline">
+                  condiciones de arriendo y la política de cancelación
+                </Link>.
+              </span>
             </label>
             {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
           </section>
@@ -274,7 +295,7 @@ export default function SelectDateSpace() {
           <aside className="bg-white p-6 rounded-3xl border border-sand-200 shadow-sm h-fit space-y-4">
             <h2 className="font-serif text-xl font-semibold text-forest-900">Resumen</h2>
             <p className="text-sm text-gray-600">{sectorActual?.nombre || 'Selecciona un espacio'}</p>
-            <p className="text-sm text-gray-600">{fecha} · {horaInicio} · {horas} horas</p>
+            <p className="text-sm text-gray-600">{fecha} · {horaInicio}–{horaTermino(horaInicio, horas)} · {horas} {Number(horas) === 1 ? 'hora' : 'horas'}</p>
             <div className="border-t border-sand-100 pt-4 flex justify-between font-semibold text-forest-900">
               <span>Total estimado</span>
               <span>${precioTotal.toLocaleString('es-CL')}</span>
@@ -287,7 +308,7 @@ export default function SelectDateSpace() {
               disabled={cargando || enviando || !sectorActual}
               className="w-full bg-forest-800 text-white py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {enviando ? 'Guardando reserva…' : 'Continuar a revisión'}
+              {enviando ? 'Guardando reserva…' : reservaEditada ? 'Guardar cambios' : 'Continuar a revisión'}
               {!enviando && <ArrowRight size={16} />}
             </button>
           </aside>

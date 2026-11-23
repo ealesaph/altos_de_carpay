@@ -62,6 +62,11 @@ class Reserva(models.Model):
         CONFIRMADO = "Confirmado", "Confirmado"
         FINALIZADO = "Finalizado", "Finalizado"
         CANCELADO = "Cancelado", "Cancelado"
+        NO_SE_PRESENTO = "No se presentó", "No se presentó"
+
+    class OrigenCancelacion(models.TextChoices):
+        CLIENTE = "Cliente", "Cliente"
+        RECINTO = "Recinto", "Altos de Carpay"
 
     id_reserva = models.AutoField(primary_key=True)
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
@@ -74,6 +79,11 @@ class Reserva(models.Model):
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     condiciones_aceptadas_en = models.DateTimeField(null=True, blank=True, editable=False)
     token_qr = models.CharField(max_length=64, unique=True, default=generar_token_qr, editable=False)
+    # Cancelación y devolución según las condiciones de arriendo del cliente.
+    cancelada_por = models.CharField(max_length=10, choices=OrigenCancelacion.choices, blank=True, default="")
+    fecha_cancelacion = models.DateTimeField(null=True, blank=True)
+    monto_devolucion = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    devolucion_realizada_en = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "reserva"
@@ -115,6 +125,11 @@ class Reserva(models.Model):
     @property
     def plazo_anticipo_vence(self):
         return self.fecha_creacion + timedelta(hours=settings.PLAZO_PAGO_ANTICIPO_HORAS)
+
+    @property
+    def plazo_saldo_vence(self):
+        """El saldo se paga hasta 24 horas antes del inicio del evento."""
+        return self.inicio - timedelta(hours=settings.PLAZO_SALDO_HORAS_ANTES)
 
     @property
     def plazo_anticipo_vencido(self):

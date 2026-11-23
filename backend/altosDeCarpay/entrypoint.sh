@@ -28,6 +28,11 @@ if [ "$SEMILLA" = "true" ] || [ "$SEMILLA" = "1" ]; then
   python seed_data.py || true
 fi
 
+# Tareas periódicas: liberar reservas sin anticipo y cerrar reservas vencidas («No se presentó»).
+INTERVALO_TAREAS="${INTERVALO_TAREAS_SEGUNDOS:-900}"
+echo "Programando tareas periódicas cada ${INTERVALO_TAREAS} segundos..."
+( while true; do python manage.py tareas_programadas || true; sleep "$INTERVALO_TAREAS"; done ) &
+
 if [ "$MODO_DEBUG" = "true" ] || [ "$MODO_DEBUG" = "1" ]; then
   echo "Iniciando servidor de desarrollo Django en 0.0.0.0:8000..."
   exec python manage.py runserver 0.0.0.0:8000

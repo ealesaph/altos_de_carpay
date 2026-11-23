@@ -165,7 +165,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticated',),
     'DEFAULT_RENDERER_CLASSES': tuple(_renderizadores),
     'DEFAULT_PARSER_CLASSES': ('rest_framework.parsers.JSONParser',),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'altosDeCarpayApp.paginacion.Paginacion',
     'PAGE_SIZE': 20,
     'DEFAULT_THROTTLE_CLASSES': (
         'rest_framework.throttling.AnonRateThrottle',
@@ -181,6 +181,15 @@ REST_FRAMEWORK = {
 }
 if os.environ.get('NUM_PROXIES'):
     REST_FRAMEWORK['NUM_PROXIES'] = int(os.environ['NUM_PROXIES'])
+
+# Caché compartida entre los procesos de Gunicorn: el contador de intentos de login y los límites
+# de solicitudes son los mismos para todos los workers (con la caché en memoria cada uno contaba aparte).
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': os.environ.get('CACHE_DIR', '/tmp/altos_de_carpay_cache'),
+    }
+}
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
@@ -241,6 +250,16 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-responder@altosdec
 ANTICIPO_PORCENTAJE = Decimal(os.environ.get('ANTICIPO_PORCENTAJE', '30'))
 PLAZO_PAGO_ANTICIPO_HORAS = int(os.environ.get('PLAZO_PAGO_ANTICIPO_HORAS', '24'))
 PAGOS_SIMULADOR_PERMITIR_RECHAZO = env_bool('PAGOS_SIMULADOR_PERMITIR_RECHAZO', DEBUG)
+
+# Reglas de negocio acordadas con el cliente (bitácora de revisión del prototipo, 23-11-2026).
+# Bloques de arriendo (hora de inicio, hora de término); 24 = medianoche. Nunca después de las 00:00.
+BLOQUES_HORARIOS = ((13, 18), (19, 24))
+PLAZO_SALDO_HORAS_ANTES = int(os.environ.get('PLAZO_SALDO_HORAS_ANTES', '24'))
+DIAS_DEVOLUCION_PARCIAL = int(os.environ.get('DIAS_DEVOLUCION_PARCIAL', '7'))
+CHECKIN_MINUTOS_ANTES = int(os.environ.get('CHECKIN_MINUTOS_ANTES', '60'))
+CIERRE_EN_PROCESO_HORAS = int(os.environ.get('CIERRE_EN_PROCESO_HORAS', '2'))
+LOGIN_MAX_INTENTOS = int(os.environ.get('LOGIN_MAX_INTENTOS', '5'))
+LOGIN_BLOQUEO_MINUTOS = int(os.environ.get('LOGIN_BLOQUEO_MINUTOS', '15'))
 
 
 LOGGING = {

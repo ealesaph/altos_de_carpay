@@ -1,6 +1,6 @@
 # Documentación Técnica, Integración SMTP y Pruebas E2E — Altos de Carpay
 
-**Fecha:** 19 de noviembre de 2026  
+**Fecha:** 19 de noviembre de 2026 (actualizado el 23 de noviembre de 2026)  
 **Alcance:** Revisión de conexiones del sistema, desarrollo del módulo de envío de correos de reserva, configuración SMTP con Brevo y ejecución de pruebas integrales (End-to-End).
 
 ---
@@ -13,14 +13,14 @@ El sistema opera sobre tres contenedores orquestados en `docker-compose.yml` baj
 | :--- | :--- | :--- | :--- |
 | Base de Datos | `carpay_postgres` | PostgreSQL 16 Alpine | `5432` (interno `db:5432`) |
 | Backend API | `carpay_backend` | Django 5.2 + DRF + SimpleJWT | `8000` (`http://localhost:8000/api/v1/`) |
-| Frontend Web | `carpay_frontend` | React + Vite + Nginx | `80` (`http://localhost/`, proxy `/api/` y `/admin/` hacia `backend:8000`) |
+| Frontend Web | `carpay_frontend` | React + Vite + Nginx | `80` (`http://localhost/`, proxy `/api/` y `/admin/` hacia `backend:8000`; el panel de la web está en `/panel`) |
 | App Móvil | Android Kotlin | Jetpack Compose + Retrofit | Configurable en `ApiClient.kt` (`10.0.2.2:8000` emulador / IP local dispositivo físico) |
 
 ### Endpoints principales conectados
 * **Autenticación y ARCO (`/api/v1/auth/`):** `login/`, `registro/`, `refresh/`, `logout/`, `perfil/`, `cambiar-password/`, `mis-datos/`, `desactivar-cuenta/`.
 * **Catálogo (`/api/v1/`):** `sectores/`, `servicios/`.
-* **Reservas y Operaciones (`/api/v1/reservas/`):** CRUD de reservas, `{id}/pagos/`, `{id}/cancelar/`, `{id}/estado/`, `{id}/validar-acceso/`, `{id}/enviar-correo/`, `exportar/`.
-* **Soporte y Control (`/api/v1/`):** `consultas/`, `consultas/{id}/responder/`, `incidencias/`, `auditoria/logs/`.
+* **Reservas y Operaciones (`/api/v1/reservas/`):** CRUD de reservas, `{id}/pagos/`, `{id}/cancelar/` (con `origen` Cliente/Recinto), `{id}/simular-cancelacion/`, `{id}/registrar-devolucion/`, `{id}/modificar/`, `{id}/estado/`, `{id}/validar-acceso/`, `{id}/enviar-correo/`, `exportar/`, `resumen/` y `?vista=proximas`.
+* **Soporte y Control (`/api/v1/`):** `consultas/` (también sin cuenta), `consultas/{id}/responder/` (envía la respuesta por correo), `incidencias/`, `auditoria/logs/`.
 
 ---
 
@@ -67,9 +67,9 @@ El sistema opera sobre tres contenedores orquestados en `docker-compose.yml` baj
 
 ### 2.4 Landing Page Pública, Consultas y Gestión de Cuenta Propia
 * **Formulario de Consultas en Landing (`frontend/src/pages/Home.jsx`):**
-  * Conectado a `POST /api/v1/consultas/` (`createConsulta`), limpiando el formulario al enviar y mostrando confirmación explícita (o aviso con enlace a `/login` si el visitante no tiene sesión de cliente).
+  * Conectado a `POST /api/v1/consultas/` (`createConsulta`), limpiando el formulario al enviar y mostrando confirmación explícita. Desde el 23-11-2026 no exige sesión: un visitante indica nombre, correo, teléfono opcional y acepta la política de privacidad.
 * **Navegación Amigable en Landing (`Home.jsx`):**
-  * La portada nunca exige login. Sin sesión muestra botones claros de **Iniciar sesión** (`/login`) y **Registrarse** (`/registro`); con sesión activa muestra **Mi cuenta** (`/mi-cuenta`), acceso directo a **Panel Admin** (`/admin`) o **Mis reservas** (`/mis-reservas`) según rol, y **Salir**.
+  * La portada nunca exige login. Sin sesión muestra botones claros de **Iniciar sesión** (`/login`) y **Registrarse** (`/registro`); con sesión activa muestra **Mi cuenta** (`/mi-cuenta`), acceso directo a **Panel Admin** (`/panel`) o **Mis reservas** (`/mis-reservas`) según rol, y **Salir**.
 * **Nueva Vista "Mi cuenta" (`frontend/src/pages/Account.jsx` en `/mi-cuenta`):**
   * Permite a cualquier usuario autenticado modificar sus datos personales (`PATCH /api/v1/auth/perfil/`) y cambiar su contraseña (`POST /api/v1/auth/cambiar-password/`).
   * Incluye botón **Volver al Panel Admin** para administradores y **Mis reservas** para clientes, además de **Cerrar sesión**.
@@ -105,12 +105,34 @@ Pruebas ejecutadas directamente contra el despliegue Docker en ejecución (`http
 
 ---
 
+### 3.1 Pruebas de las correcciones solicitadas por el cliente (23-11-2026)
+
+Pruebas automáticas en `reservasApp/tests_observaciones.py`, ejecutadas en el contenedor `carpay_backend` (`python manage.py test`: 35 de 35 aprobadas), más revisión en el navegador sobre `http://localhost/`:
+
+| # | Observación / Hallazgo | Caso de prueba | Resultado esperado | Estado |
+| :--- | :--- | :--- | :--- | :--- |
+| 20 | Obs. 5 / B4 | Reservar 13:00–18:00 y 19:00–00:00; luego 22:00 + 6 h, 16:00 + 3 h, 10:00 y 13:30 | `201` en los bloques; `400` fuera de ellos | Aprobado |
+| 21 | Obs. 6 / M5 | `POST /reservas/{id}/modificar/` cambia hora y horas | Misma reserva, nuevo total, sin reserva duplicada | Aprobado |
+| 22 | Obs. 8 / B3 | Crear reserva a las 19:00 | `plazo_saldo_vence` = inicio − 24 h | Aprobado |
+| 23 | Obs. 2 / M9 | Consulta sin cuenta, sin datos y con datos completos | `400` sin datos; `201` y correo al responder | Aprobado |
+| 24 | Obs. 9 / M8 | Cliente consulta, admin responde | El cliente ve la respuesta y recibe correo | Aprobado |
+| 25 | Obs. 11 / M1 | `GET /reservas/resumen/` con una reserva cancelada | Saldo solo de vigentes y cobrado del mes | Aprobado |
+| 26 | Obs. 12 / M1 | `GET /reservas/?vista=proximas` | Solo vigentes desde hoy, en orden ascendente | Aprobado |
+| 27 | Obs. 13 / M2 | `cerrar_reservas_vencidas()` | Confirmada vencida → `No se presentó`; en proceso → `Finalizado` | Aprobado |
+| 28 | Obs. 15 / A5 | Cancelar con 20 días (cliente), simular con 3 días, cancelar por el recinto | Devolución $70.000, $0 (sin cambiar estado) y $100.000 | Aprobado |
+| 29 | Obs. 16 / A3 | Entrada de una reserva a 12 días y de otra en 30 minutos | `409` y `201` | Aprobado |
+| 30 | A1 | 5 logins fallidos con IP distinta cada vez y luego la clave correcta | `429` «Cuenta bloqueada temporalmente» | Aprobado |
+| 31 | A2 | Recargar `http://localhost/panel` | Abre el panel de la web | Aprobado |
+| 32 | Obs. 3 / B9 | Portada en 375 px | Botón de menú con todas las secciones | Aprobado |
+
 ## 4. Pendientes para Despliegue en Producción
 
 1. Configurar `DJANGO_DEBUG=False`, `DJANGO_ALLOWED_HOSTS` con el dominio productivo y certificado SSL/HTTPS en Nginx.
 2. En la app Android, desactivar `usesCleartextTraffic="true"` al pasar a HTTPS y migrar `TokenManager` a `EncryptedSharedPreferences`.
-3. Programar tarea periódica (cron) para ejecutar `python manage.py cancelar_reservas_impagas` y respaldos automáticos de PostgreSQL.
+3. Programar respaldos automáticos de PostgreSQL. (La liberación de reservas impagas y el cierre de reservas vencidas ya corren cada 15 minutos con `tareas_programadas`, iniciada por `entrypoint.sh`.)
 4. En Brevo, completar la autenticación del dominio `altosdecarpay.com` (registros DKIM/SPF en DNS) para máxima entregabilidad en bandeja principal.
+5. Integrar Webpay real con credenciales de comercio de Transbank y agregar cabeceras de seguridad (CSP) en Nginx.
+6. Completar la página `/condiciones` con el texto del contrato de arriendo del cliente.
 
 ---
 

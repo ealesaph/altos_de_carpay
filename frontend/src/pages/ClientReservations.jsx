@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, AlertCircle, LogOut, Mail } from 'lucide-react';
-import { cancelReservation, getReservations, hasSession, logout, sendReservationEmail } from '../api.js';
+import { cancelReservation, getReservations, hasSession, logout, previewCancellation, sendReservationEmail } from '../api.js';
 import defaultSpaceImg from '../assets/default-space.svg';
+import { useConfirmacion } from '../components/ConfirmDialog.jsx';
+import Footer from '../components/Footer.jsx';
+import { formatoCLP, formatoFechaHora } from '../reglas.js';
 
 export default function ClientReservations() {
   const navigate = useNavigate();
@@ -11,6 +14,7 @@ export default function ClientReservations() {
   const [mensajeCorreo, setMensajeCorreo] = useState('');
   const [enviandoCorreoId, setEnviandoCorreoId] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [dialogo, confirmar] = useConfirmacion();
 
   useEffect(() => {
     if (!hasSession()) {
@@ -48,6 +52,24 @@ export default function ClientReservations() {
     setError('');
     setMensajeCorreo('');
     try {
+      const simulacion = await previewCancellation(id);
+      const acepta = await confirmar({
+        titulo: `¿Cancelar la reserva N° ${id}?`,
+        mensaje: (
+          <>
+            <p>Esta acción no se puede deshacer y la fecha quedará disponible para otras personas.</p>
+            <p>
+              Pagado: <strong>{formatoCLP(simulacion.monto_pagado)}</strong> · Devolución:{' '}
+              <strong>{formatoCLP(simulacion.monto_devolucion)}</strong>
+            </p>
+            <p className="text-xs text-gray-500">{simulacion.regla}</p>
+          </>
+        ),
+        textoConfirmar: 'Sí, cancelar reserva',
+        textoCancelar: 'No, mantenerla',
+        peligro: true,
+      });
+      if (!acepta) return;
       await cancelReservation(id);
       setReservas(await getReservations());
     } catch (requestError) {
@@ -71,10 +93,14 @@ export default function ClientReservations() {
 
   return (
     <div className="min-h-screen bg-sand-50 text-gray-800 font-sans">
+      {dialogo}
       <header className="bg-white border-b border-sand-200">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
           <Link to="/" className="font-serif text-xl font-bold text-forest-900">Altos de carpay</Link>
           <div className="flex items-center gap-4">
+            <Link to="/mi-cuenta#mis-consultas" className="text-sm font-medium text-forest-800 hover:underline">
+              Mis consultas
+            </Link>
             <Link to="/mi-cuenta" className="text-sm font-medium text-forest-800 hover:underline">
               Mi cuenta
             </Link>
@@ -131,7 +157,7 @@ export default function ClientReservations() {
                   <strong className="block text-forest-900 mt-1">Saldo: ${saldo.toLocaleString('es-CL')}</strong>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  {reserva.estado !== 'Cancelado' && (
+                  {!['Cancelado', 'No se presentó'].includes(reserva.estado) && (
                     <button
                       type="button"
                       disabled={enviandoCorreoId === reserva.id_reserva}
@@ -142,7 +168,7 @@ export default function ClientReservations() {
                       {enviandoCorreoId === reserva.id_reserva ? 'Enviando…' : 'Reenviar correo'}
                     </button>
                   )}
-                  {saldo > 0 && reserva.estado !== 'Cancelado' && (
+                  {saldo > 0 && ['Pendiente', 'Confirmado', 'En Proceso'].includes(reserva.estado) && (
                     <Link
                       to="/simulador/tarjeta"
                       state={{
@@ -175,13 +201,33 @@ export default function ClientReservations() {
               {reserva.estado === 'Pendiente' && saldo > 0 && (
                 <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 flex gap-2">
                   <AlertCircle size={16} className="shrink-0" />
-                  <span>Fecha límite de anticipo: {new Date(reserva.plazo_anticipo_vence).toLocaleString('es-CL')}</span>
+                  <span>Fecha límite del anticipo: {formatoFechaHora(reserva.plazo_anticipo_vence)}. Si no se paga, la fecha se libera automáticamente.</span>
+                </div>
+              )}
+              {reserva.estado === 'Confirmado' && saldo > 0 && (
+                <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 flex gap-2">
+                  <AlertCircle size={16} className="shrink-0" />
+                  <span>Paga el saldo hasta 24 horas antes del evento: {formatoFechaHora(reserva.plazo_saldo_vence)}.</span>
+                </div>
+              )}
+              {reserva.estado === 'Cancelado' && Number(reserva.monto_devolucion) > 0 && (
+                <div className="mt-4 bg-sand-50 border border-sand-200 rounded-xl p-3 text-xs text-gray-700">
+                  Devolución: {formatoCLP(reserva.monto_devolucion)} ·{' '}
+                  {reserva.devolucion_realizada_en
+                    ? `realizada el ${formatoFechaHora(reserva.devolucion_realizada_en)}`
+                    : 'pendiente; Altos de Carpay te contactará para transferirla.'}
+                </div>
+              )}
+              {reserva.estado === 'No se presentó' && (
+                <div className="mt-4 bg-sand-50 border border-sand-200 rounded-xl p-3 text-xs text-gray-700">
+                  No se registró tu llegada en el horario reservado; según las condiciones, se conserva el anticipo.
                 </div>
               )}
             </article>
           );
         })}
       </main>
+      <Footer />
     </div>
   );
 }

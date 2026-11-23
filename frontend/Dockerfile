@@ -15,6 +15,8 @@ FROM nginx:alpine
 # Copiar el build compilado al directorio de Nginx
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# X-Forwarded-For se reemplaza (no se concatena) con la IP real: un cliente no puede falsear su IP para
+# saltarse el límite de intentos de inicio de sesión. Django confía en 1 proxy (NUM_PROXIES=1).
 # Configuración personalizada de Nginx para SPA (Single Page Application) y Proxy Inverso hacia Django
 RUN echo 'server { \
     listen 80; \
@@ -27,13 +29,13 @@ RUN echo 'server { \
         proxy_pass http://backend:8000/api/; \
         proxy_set_header Host $host; \
         proxy_set_header X-Real-IP $remote_addr; \
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+        proxy_set_header X-Forwarded-For $remote_addr; \
     } \
     location /admin/ { \
         proxy_pass http://backend:8000/admin/; \
         proxy_set_header Host $host; \
         proxy_set_header X-Real-IP $remote_addr; \
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+        proxy_set_header X-Forwarded-For $remote_addr; \
     } \
     location /static/ { \
         proxy_pass http://backend:8000/static/; \

@@ -4,6 +4,7 @@ const REFRESH_TOKEN_KEY = 'altos_de_carpay_refresh';
 const USER_KEY = 'altos_de_carpay_user';
 
 function getErrorMessage(data, status) {
+  if (status === 429 && data?.detail) return data.detail;
   if (data && typeof data === 'object') {
     const messages = Object.values(data).flatMap((value) =>
       Array.isArray(value) ? value : [value],
@@ -225,9 +226,32 @@ export async function createReservation(form) {
   });
 }
 
-export async function getReservations() {
-  const data = await apiRequest('/reservas/');
+export async function getReservations(params = {}) {
+  const consulta = new URLSearchParams({ page_size: 100, ...params }).toString();
+  const data = await apiRequest(`/reservas/?${consulta}`);
   return Array.isArray(data) ? data : data.results;
+}
+
+// Métricas del panel calculadas en el servidor sobre todas las reservas.
+export async function getReservationSummary() {
+  return apiRequest('/reservas/resumen/');
+}
+
+// «Editar selección»: modifica la misma reserva pendiente en vez de crear otra.
+export async function updateReservationSelection(id, form) {
+  return apiRequest(`/reservas/${id}/modificar/`, {
+    method: 'POST',
+    body: JSON.stringify(form),
+  });
+}
+
+export async function previewCancellation(id, origen) {
+  const consulta = origen ? `?origen=${encodeURIComponent(origen)}` : '';
+  return apiRequest(`/reservas/${id}/simular-cancelacion/${consulta}`);
+}
+
+export async function registerRefund(id) {
+  return apiRequest(`/reservas/${id}/registrar-devolucion/`, { method: 'POST' });
 }
 
 export async function getReservation(id) {
@@ -241,8 +265,11 @@ export async function createPayment(id, form) {
   });
 }
 
-export async function cancelReservation(id) {
-  return apiRequest(`/reservas/${id}/cancelar/`, { method: 'POST' });
+export async function cancelReservation(id, origen) {
+  return apiRequest(`/reservas/${id}/cancelar/`, {
+    method: 'POST',
+    body: JSON.stringify(origen ? { origen } : {}),
+  });
 }
 
 export async function changeReservationStatus(id, estado) {

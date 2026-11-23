@@ -35,6 +35,8 @@ services:
       DB_PORT: 5432
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
+      # Nginx es el único proxy delante de Django: se usa la última IP de X-Forwarded-For.
+      NUM_PROXIES: 1
     volumes:
       - ./backend/altosDeCarpay:/app
     ports:

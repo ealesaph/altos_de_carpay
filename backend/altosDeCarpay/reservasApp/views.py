@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db.models import DecimalField, Q, Sum, Value
+from django.utils import timezone
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from rest_framework import mixins, status, viewsets
@@ -18,10 +19,12 @@ from .models import BitacoraIncidencia, Pago, Reserva, Review, Sector, Servicio
 from .serializers import (
     BitacoraIncidenciaSerializer,
     CambioEstadoSerializer,
+    CancelacionSerializer,
     PagoCrearSerializer,
     PagoSerializer,
     ReservaCrearSerializer,
     ReservaDetalleSerializer,
+    ReservaModificarSerializer,
     ReviewSerializer,
     SectorSerializer,
     ServicioSerializer,
@@ -118,6 +121,9 @@ class ReservaViewSet(
         params = self.request.query_params
         if params.get("estado") in Reserva.Estado.values:
             consulta = consulta.filter(estado=params["estado"])
+        if params.get("vista") == "proximas":
+            consulta = consulta.filter(fecha__gte=timezone.localdate(), estado__in=services.ESTADOS_QUE_BLOQUEAN) \
+                .order_by("fecha", "hora_inicio", "id_reserva")
         if params.get("cliente", "").isdigit():
             consulta = consulta.filter(usuario_id=int(params["cliente"]))
         if params.get("desde"):
@@ -135,8 +141,69 @@ class ReservaViewSet(
 
     @action(detail=True, methods=["post"])
     def cancelar(self, request, pk=None):
-        reserva = services.cancelar_reserva(reserva=self.get_object(), solicitante=request.user)
+        serializador = CancelacionSerializer(data=request.data)
+        serializador.is_valid(raise_exception=True)
+        reserva = services.cancelar_reserva(reserva=self.get_object(), solicitante=request.user,
+                                            origen=serializador.validated_data.get("origen"))
         return Response(self.get_serializer(self.get_queryset().get(pk=reserva.pk)).data)
+
+    @action(detail=True, methods=["get"], url_path="simular-cancelacion")
+    def simular_cancelacion(self, request, pk=None):
+        """Muestra antes de confirmar cuánto se devolvería según las condiciones de arriendo."""
+        serializador = CancelacionSerializer(data=request.query_params)
+        serializador.is_valid(raise_exception=True)
+        datos = services.simular_cancelacion(reserva=self.get_object(), solicitante=request.user,
+                                             origen=serializador.validated_data.get("origen"))
+        return Response({**datos, "monto_pagado": str(datos["monto_pagado"]),
+                         "monto_devolucion": str(datos["monto_devolucion"])})
+
+    @action(detail=True, methods=["post"], url_path="registrar-devolucion", permission_classes=[EsAdministrador])
+    def registrar_devolucion(self, request, pk=None):
+        reserva = services.registrar_devolucion(reserva=self.get_object())
+        return Response(self.get_serializer(self.get_queryset().get(pk=reserva.pk)).data)
+
+    @action(detail=True, methods=["post"])
+    def modificar(self, request, pk=None):
+        """«Editar selección»: actualiza la misma reserva pendiente en lugar de crear una nueva."""
+        reserva = self.get_object()
+        serializador = ReservaModificarSerializer(data=request.data, context={"request": request})
+        serializador.is_valid(raise_exception=True)
+        datos = serializador.validated_data
+        services.modificar_reserva(
+            reserva=reserva, solicitante=request.user, fecha=datos["fecha"], hora_inicio=datos["hora_inicio"],
+            sectores=datos["sectores"], servicios=datos.get("servicios", []),
+        )
+        return Response(self.get_serializer(self.get_queryset().get(pk=reserva.pk)).data)
+
+    @action(detail=False, methods=["get"], permission_classes=[EsAdministrador])
+    def resumen(self, request):
+        """Métricas del panel calculadas sobre todas las reservas (no solo la página visible)."""
+        hoy = timezone.localdate()
+        vigentes = Reserva.objects.filter(estado__in=services.ESTADOS_QUE_BLOQUEAN)
+        saldo = Decimal("0.00")
+        con_saldo = 0
+        for reserva in vigentes.annotate(total_pagado=Coalesce(
+            Sum("pagos__monto", filter=Q(pagos__estado_pago=Pago.Estado.APROBADO)),
+            Value(Decimal("0.00")), output_field=DecimalField(max_digits=12, decimal_places=2),
+        )):
+            if reserva.saldo_pendiente > 0:
+                saldo += reserva.saldo_pendiente
+                con_saldo += 1
+        cobrado_mes = Pago.objects.filter(
+            estado_pago=Pago.Estado.APROBADO, fecha_pago__year=hoy.year, fecha_pago__month=hoy.month,
+        ).aggregate(t=Sum("monto"))["t"] or Decimal("0.00")
+        devoluciones = Reserva.objects.filter(
+            estado=Reserva.Estado.CANCELADO, monto_devolucion__gt=0, devolucion_realizada_en__isnull=True,
+        )
+        return Response({
+            "total_reservas": Reserva.objects.count(),
+            "proximas": vigentes.filter(fecha__gte=hoy).count(),
+            "saldo_por_cobrar": str(saldo),
+            "reservas_con_saldo": con_saldo,
+            "cobrado_mes": str(cobrado_mes),
+            "devoluciones_pendientes": devoluciones.count(),
+            "monto_devoluciones_pendientes": str(devoluciones.aggregate(t=Sum("monto_devolucion"))["t"] or 0),
+        })
 
     @action(detail=True, methods=["post"], url_path="estado", permission_classes=[EsAdministrador])
     def cambiar_estado(self, request, pk=None):

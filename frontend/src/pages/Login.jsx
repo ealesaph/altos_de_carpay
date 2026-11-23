@@ -24,7 +24,7 @@ export default function Login() {
     setEnviando(true);
     try {
       const usuario = await login(credenciales.correo, credenciales.password);
-      const destino = location.state?.next || (usuario.rol === 'Admin' ? '/admin' : '/reservar/espacio');
+      const destino = location.state?.next || (usuario.rol === 'Admin' ? '/panel' : '/reservar/espacio');
       if (usuario.requiere_consentimiento) {
         // Ley N° 21.719: el titular debe aceptar la versión vigente de la política antes de continuar
         navigate('/privacidad', { state: { aceptar: true, next: destino } });
@@ -170,8 +170,8 @@ export default function Login() {
       <footer className="max-w-6xl w-full mx-auto flex flex-col sm:flex-row justify-between items-center text-[11px] text-gray-400 border-t border-sand-200/60 pt-4 gap-2">
         <span>Altos de carpay · La Reina, Santiago</span>
         <div className="flex gap-4">
-          <a href="#" className="hover:underline">Privacidad</a>
-          <a href="#" className="hover:underline">Condiciones de reserva</a>
+          <Link to="/privacidad" className="hover:underline">Privacidad</Link>
+          <Link to="/condiciones" className="hover:underline">Condiciones de reserva</Link>
         </div>
       </footer>
 

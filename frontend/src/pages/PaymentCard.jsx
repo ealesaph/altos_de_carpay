@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { CreditCard, Check, ArrowRight } from 'lucide-react';
 import defaultSpaceImg from '../assets/default-space.svg';
+import Footer from '../components/Footer.jsx';
+import { desgloseReserva, formatoFechaHora } from '../reglas.js';
 
 export default function PaymentCard() {
   const navigate = useNavigate();
@@ -15,6 +17,7 @@ export default function PaymentCard() {
   }, [datosReserva, navigate]);
 
   if (!datosReserva?.id_reserva) return null;
+  const { arriendo, extras } = desgloseReserva(datosReserva);
 
   const handleContinuar = (e) => {
     e.preventDefault();
@@ -301,18 +304,18 @@ export default function PaymentCard() {
             <div className="space-y-1.5 text-xs text-gray-500 border-t border-sand-100 pt-3">
               <div className="flex justify-between">
                 <span>Total arriendo · {datosReserva.horas_reservadas || 5} horas</span>
-                <span>${Number(datosReserva.precioArriendo ?? datosReserva.monto_total ?? 0).toLocaleString('es-CL')}</span>
+                <span>${arriendo.toLocaleString('es-CL')}</span>
               </div>
               <div className="flex justify-between">
                 <span>Extras seleccionados</span>
-                <span>${Number(datosReserva.precioExtras || 0).toLocaleString('es-CL')}</span>
+                <span>${extras.toLocaleString('es-CL')}</span>
               </div>
             </div>
 
             {datosReserva.tipoPago === 'Anticipo' && (
               <div className="bg-amber-50/60 p-3.5 rounded-xl border border-amber-200 text-amber-900 text-xs space-y-1 leading-relaxed">
                 <span className="font-semibold block">Saldo pendiente: ${Number(datosReserva.saldoPendiente || 0).toLocaleString('es-CL')}</span>
-                <span>Debe cancelarse hasta 24 horas antes del evento ({datosReserva.fecha}). La reserva caduca por impago si no se completa el saldo.</span>
+                <span>Debe pagarse hasta 24 horas antes del evento{datosReserva.plazo_saldo_vence ? ` (${formatoFechaHora(datosReserva.plazo_saldo_vence)})` : ''}.</span>
               </div>
             )}
           </div>
@@ -320,18 +323,7 @@ export default function PaymentCard() {
         </div>
       </main>
 
-      <footer className="bg-forest-900 text-white py-10 border-t border-forest-800 mt-16 text-xs text-gray-400">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2 text-white font-serif font-bold text-base">
-            <span>🍃</span> Altos de carpay
-          </div>
-          <div className="flex gap-6">
-            <a href="#" className="hover:underline">Condiciones de reserva</a>
-            <a href="#" className="hover:underline">Privacidad</a>
-            <a href="#" className="hover:underline">Contacto</a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
     </div>
   );

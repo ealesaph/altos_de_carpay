@@ -1,6 +1,6 @@
 # Altos de Carpay
 
-Aplicación web React/Vite conectada a una API Django REST y PostgreSQL, orquestada completamente mediante Docker Compose. El flujo de cliente usa el catálogo y los precios del servidor para registrar reservas, simular pagos y consultar reservas; el panel administrativo permite revisar reservas, gestionar tarifas, responder consultas y exportar reportes CSV.
+Aplicación web React/Vite conectada a una API Django REST y PostgreSQL, orquestada completamente mediante Docker Compose. El flujo de cliente usa el catálogo y los precios del servidor para registrar reservas, simular pagos y consultar reservas; el panel administrativo permite revisar reservas, gestionar tarifas, responder consultas y exportar reportes CSV y Excel.
 
 ---
 
@@ -18,12 +18,16 @@ Aplicación web React/Vite conectada a una API Django REST y PostgreSQL, orquest
    * Con `DJANGO_DEBUG=true` (desarrollo) además ejecuta `makemigrations`, carga los datos semilla (`seed_data.py`) y usa el servidor de desarrollo de Django.
    * Con `DJANGO_DEBUG=false` (producción) ejecuta `collectstatic` y levanta **Gunicorn**; los datos semilla solo se cargan si `CARGAR_DATOS_SEMILLA=true`, y se exigen `DJANGO_SECRET_KEY` y `FIELD_ENCRYPTION_KEY`.
    * PostgreSQL solo publica el puerto 5432 en `127.0.0.1` (no queda expuesto a la red).
+   * En ambos modos el contenedor ejecuta `python manage.py tareas_programadas` cada 15 minutos (`INTERVALO_TAREAS_SEGUNDOS`, por defecto `900`): libera las reservas sin anticipo pagado a tiempo y cierra las reservas vencidas (estado «No se presentó» o «Finalizado»). No hace falta configurar un cron aparte.
+   * Nginx reemplaza `X-Forwarded-For` con la IP real del visitante y `docker-compose.yml` fija `NUM_PROXIES=1`, para que el límite de intentos de inicio de sesión no se pueda saltar falseando la IP.
 
 ### Accesos y Credenciales de Prueba (Seed Automático)
 
 * **Frontend Web (Nginx + React):** `http://localhost/`
 * **Backend API REST:** `http://localhost:8000/api/v1/` (también proxy en `http://localhost/api/v1/`)
-* **Django Admin:** `http://localhost/admin/`
+* **Panel administrativo de la web:** `http://localhost/panel` (antes `/admin`; esa ruta ahora redirige al panel)
+* **Django Admin (uso interno):** `http://localhost/admin/`
+* **Condiciones de reserva públicas:** `http://localhost/condiciones`
 * **Emulador Android Studio:** `http://10.0.2.2:8000/api/v1/`
 
 Cuentas iniciales creadas automáticamente en PostgreSQL:
@@ -74,3 +78,27 @@ npm run dev
 Vite reenvía `/api` al servidor Django en `127.0.0.1:8000`. El endpoint público de catálogo es `GET /api/v1/sectores/`; registro, login, reservas y pagos usan los endpoints `/api/v1/auth/` y `/api/v1/reservas/`.
 
 Las credenciales deben residir solo en el `.env` local.
+
+---
+
+## Reglas de arriendo configurables
+
+Las reglas acordadas con el cliente en la revisión del prototipo (23-11-2026) están en `backend/altosDeCarpay/altosDeCarpay/settings.py` y, para la web, en `frontend/src/reglas.js`. Si cambian, se deben modificar en ambos archivos:
+
+| Regla | Parámetro | Valor |
+| :--- | :--- | :--- |
+| Bloques de arriendo (horas completas, nunca después de medianoche) | `BLOQUES_HORARIOS` | 13:00–18:00 y 19:00–00:00 |
+| Plazo para pagar el anticipo | `PLAZO_PAGO_ANTICIPO_HORAS` | 24 horas desde la creación |
+| Plazo para pagar el saldo | `PLAZO_SALDO_HORAS_ANTES` | 24 horas antes del evento |
+| Cancelación del arrendatario con devolución parcial (todo menos el anticipo) | `DIAS_DEVOLUCION_PARCIAL` | más de 7 días antes |
+| Registro de entrada (QR o manual) | `CHECKIN_MINUTOS_ANTES` | desde 60 minutos antes del inicio |
+| Cierre automático de reservas en proceso | `CIERRE_EN_PROCESO_HORAS` | 2 horas después del término |
+| Bloqueo de la cuenta por intentos fallidos | `LOGIN_MAX_INTENTOS` / `LOGIN_BLOQUEO_MINUTOS` | 5 intentos / 15 minutos |
+
+## Pruebas automáticas
+
+```powershell
+docker exec carpay_backend python manage.py test
+```
+
+La suite tiene 35 pruebas; `reservasApp/tests_observaciones.py` cubre las correcciones pedidas por el cliente.

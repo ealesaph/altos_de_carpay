@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createConsulta, getSectors, getSessionUser, hasSession, logout } from '../api.js';
 import defaultSpaceImg from '../assets/default-space.svg';
+import { textoBloques } from '../reglas.js';
 import { 
   Sparkles, 
   MapPin, 
@@ -12,7 +13,9 @@ import {
   ArrowRight,
   Flame,
   Car,
-  Compass
+  Compass,
+  Menu,
+  X
 } from 'lucide-react';
 
 export default function Home() {
@@ -20,12 +23,15 @@ export default function Home() {
   const [sectores, setSectores] = useState([]);
   const [errorCatalogo, setErrorCatalogo] = useState('');
   const [cargandoCatalogo, setCargandoCatalogo] = useState(true);
+  const [menuAbierto, setMenuAbierto] = useState(false);
   const [consultaForm, setConsultaForm] = useState({
     nombre: '',
+    correo: '',
     telefono: '',
     espacio: '',
     fecha: '',
     mensaje: '',
+    aceptaPrivacidad: false,
   });
   const [enviandoConsulta, setEnviandoConsulta] = useState(false);
   const [consultaExito, setConsultaExito] = useState('');
@@ -57,9 +63,16 @@ export default function Home() {
     setConsultaError('');
     setConsultaExito('');
 
-    if (!hasSession()) {
-      setConsultaError('Debes iniciar sesión como cliente para enviar tu consulta.');
-      return;
+    const conCuenta = hasSession();
+    if (!conCuenta) {
+      if (!consultaForm.nombre.trim() || !consultaForm.correo.trim()) {
+        setConsultaError('Indica tu nombre y un correo para poder responderte.');
+        return;
+      }
+      if (!consultaForm.aceptaPrivacidad) {
+        setConsultaError('Acepta la política de privacidad para que usemos tus datos solo para responderte.');
+        return;
+      }
     }
     if (!consultaForm.mensaje.trim()) {
       setConsultaError('Escribe tu mensaje o consulta antes de enviar.');
@@ -71,22 +84,27 @@ export default function Home() {
       sectorElegido ? `Consulta: ${sectorElegido.nombre}` : 'Consulta de disponibilidad',
       consultaForm.fecha ? `(${consultaForm.fecha})` : '',
     ].filter(Boolean);
-    const detallesContacto = [
-      consultaForm.nombre.trim() ? `Nombre: ${consultaForm.nombre.trim()}` : '',
-      consultaForm.telefono.trim() ? `Teléfono: ${consultaForm.telefono.trim()}` : '',
-    ].filter(Boolean);
-    const mensajeFinal = detallesContacto.length
-      ? `${detallesContacto.join(' · ')}\n${consultaForm.mensaje.trim()}`
-      : consultaForm.mensaje.trim();
+    const detallesContacto = conCuenta && consultaForm.telefono.trim()
+      ? `Teléfono de contacto: ${consultaForm.telefono.trim()}\n`
+      : '';
+    const mensajeFinal = `${detallesContacto}${consultaForm.mensaje.trim()}`;
 
     setEnviandoConsulta(true);
     try {
       await createConsulta({
         asunto: partesAsunto.join(' '),
         mensaje: mensajeFinal,
+        ...(conCuenta ? {} : {
+          nombre_contacto: consultaForm.nombre.trim(),
+          correo_contacto: consultaForm.correo.trim(),
+          telefono_contacto: consultaForm.telefono.trim(),
+          acepta_privacidad: consultaForm.aceptaPrivacidad,
+        }),
       });
-      setConsultaForm({ nombre: '', telefono: '', espacio: '', fecha: '', mensaje: '' });
-      setConsultaExito('Tu consulta fue enviada y procesada correctamente. Te responderemos a la brevedad.');
+      setConsultaForm({ nombre: '', correo: '', telefono: '', espacio: '', fecha: '', mensaje: '', aceptaPrivacidad: false });
+      setConsultaExito(conCuenta
+        ? 'Recibimos tu consulta. Te avisaremos por correo y verás la respuesta en Mi cuenta → Mis consultas.'
+        : 'Recibimos tu consulta. Te responderemos al correo que indicaste.');
     } catch (requestError) {
       setConsultaError(requestError.message);
     } finally {
@@ -113,7 +131,7 @@ export default function Home() {
     },
     {
       q: "¿Puedo agregar horas extra el día del evento?",
-      a: "El arriendo contempla bloques de 5 horas. La adición de horas extras estará siempre sujeta a la disponibilidad del recinto posterior a tu bloque."
+      a: `El recinto se arrienda por horas completas dentro de dos bloques: ${textoBloques()}. No se arrienda después de la medianoche.`
     },
     {
       q: "¿Tienen estacionamiento privado?",
@@ -150,7 +168,7 @@ export default function Home() {
               <>
                 {usuarioSesion.rol === 'Admin' ? (
                   <Link
-                    to="/admin"
+                    to="/panel"
                     className="text-xs font-semibold text-forest-900 bg-forest-100 hover:bg-forest-200 px-3.5 py-2 rounded-full transition-colors"
                   >
                     Panel Admin
@@ -197,6 +215,17 @@ export default function Home() {
               </>
             )}
 
+            <button
+              type="button"
+              onClick={() => setMenuAbierto((abierto) => !abierto)}
+              aria-expanded={menuAbierto}
+              aria-controls="menu-movil"
+              aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
+              className="md:hidden p-2 rounded-full text-forest-900 hover:bg-sand-100"
+            >
+              {menuAbierto ? <X size={20} /> : <Menu size={20} />}
+            </button>
+
             <a 
               href="#espacios" 
               className="hidden sm:inline-block bg-forest-800 text-white text-xs font-semibold uppercase tracking-wider px-5 py-2.5 rounded-full hover:bg-forest-900 transition-all shadow-sm active:scale-95"
@@ -205,6 +234,25 @@ export default function Home() {
             </a>
           </div>
         </div>
+
+        {menuAbierto && (
+          <nav id="menu-movil" className="md:hidden border-t border-sand-200 bg-sand-50 px-6 py-3 flex flex-col text-sm font-medium text-gray-700">
+            {[
+              ['#espacios', 'Espacios'],
+              ['#experiencia', 'Experiencia'],
+              ['#pasos', 'Cómo es'],
+              ['#faq', 'Preguntas'],
+              ['#contacto', 'Contacto'],
+            ].map(([ancla, texto]) => (
+              <a key={ancla} href={ancla} onClick={() => setMenuAbierto(false)} className="py-2.5 border-b border-sand-200/70 last:border-0 hover:text-forest-900">
+                {texto}
+              </a>
+            ))}
+            <Link to="/condiciones" onClick={() => setMenuAbierto(false)} className="py-2.5 hover:text-forest-900">
+              Condiciones de reserva
+            </Link>
+          </nav>
+        )}
       </header>
 
       {/* 2. HERO PRINCIPAL */}
@@ -521,7 +569,7 @@ export default function Home() {
               </p>
               <p className="flex items-center gap-2">
                 <Clock size={15} className="text-forest-800" />
-                <span>Bloques disponibles: Diurno (13:00 - 18:00) y Vespertino</span>
+                <span>Bloques disponibles: {textoBloques()}</span>
               </p>
             </div>
           </div>
@@ -540,11 +588,7 @@ export default function Home() {
               {consultaError && (
                 <div role="alert" className="bg-red-50 border border-red-200 text-red-800 text-xs px-4 py-3 rounded-xl flex items-center justify-between gap-2">
                   <span>{consultaError}</span>
-                  {!hasSession() && (
-                    <Link to="/login" className="font-semibold underline shrink-0">
-                      Iniciar sesión
-                    </Link>
-                  )}
+
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -559,6 +603,21 @@ export default function Home() {
                     className="w-full text-sm border border-sand-200 rounded-xl p-3 focus:outline-none focus:border-forest-800 bg-sand-50/30" 
                   />
                 </div>
+                {!usuarioSesion && (
+                  <div>
+                    <label htmlFor="consulta-correo" className="text-xs font-semibold text-gray-700 block mb-1.5">Correo electrónico</label>
+                    <input
+                      id="consulta-correo"
+                      type="email"
+                      name="correo"
+                      autoComplete="email"
+                      value={consultaForm.correo}
+                      onChange={(e) => setConsultaForm((f) => ({ ...f, correo: e.target.value }))}
+                      placeholder="tucorreo@ejemplo.cl"
+                      className="w-full text-sm border border-sand-200 rounded-xl p-3 focus:outline-none focus:border-forest-800 bg-sand-50/30"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="text-xs font-semibold text-gray-700 block mb-1.5">Teléfono / WhatsApp</label>
                   <input 
@@ -616,6 +675,25 @@ export default function Home() {
                 ></textarea>
               </div>
 
+              {usuarioSesion ? (
+                <p className="text-[11px] text-gray-500">
+                  Te responderemos a tu correo registrado y verás la respuesta en Mi cuenta → Mis consultas.
+                </p>
+              ) : (
+                <label className="flex items-start gap-2 text-xs text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={consultaForm.aceptaPrivacidad}
+                    onChange={(e) => setConsultaForm((f) => ({ ...f, aceptaPrivacidad: e.target.checked }))}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    No necesitas cuenta. Acepto que usen mis datos solo para responder esta consulta, según la{' '}
+                    <Link to="/privacidad" className="underline font-semibold text-forest-800">política de privacidad</Link>.
+                  </span>
+                </label>
+              )}
+
               <button 
                 type="submit" 
                 disabled={enviandoConsulta}
@@ -644,6 +722,10 @@ export default function Home() {
           <div className="text-xs text-gray-400 text-center md:text-right space-y-1">
             <p>© {new Date().getFullYear()} Altos de carpay. Proyecto Inacap - Ingeniería de Software.</p>
             <p>Cumplimiento de estándares ISO/IEC 25010 y WCAG 2.1.</p>
+            <p className="space-x-4 pt-1">
+              <Link to="/condiciones" className="hover:underline">Condiciones de reserva</Link>
+              <Link to="/privacidad" className="hover:underline">Privacidad</Link>
+            </p>
           </div>
         </div>
       </footer>

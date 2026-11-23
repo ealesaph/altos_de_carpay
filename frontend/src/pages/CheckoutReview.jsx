@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Check, Lock, ExternalLink } from 'lucide-react';
 import defaultSpaceImg from '../assets/default-space.svg';
+import Footer from '../components/Footer.jsx';
+import { desgloseReserva, formatoFechaHora } from '../reglas.js';
 
 export default function CheckoutReview() {
   const navigate = useNavigate();
@@ -20,11 +22,8 @@ export default function CheckoutReview() {
 
   const precioTotal = Number(datosReserva.monto_total);
   const montoAnticipo = Number(datosReserva.monto_anticipo);
-  const precioExtras = Number(
-    datosReserva.precioExtras ??
-      (datosReserva.servicios || []).reduce((acc, s) => acc + Number(s.subtotal || Number(s.valor_unitario || 0) * Number(s.cantidad || 1)), 0)
-  );
-  const precioArriendo = Math.max(0, precioTotal - precioExtras);
+  // Desglose desde las líneas que guardó el servidor (igual en revisión, simulador y comprobante).
+  const { arriendo: precioArriendo, extras: precioExtras } = desgloseReserva(datosReserva);
   const esAnticipo = tipoPago === 'Anticipo';
   const saldoPendiente = esAnticipo ? precioTotal - montoAnticipo : 0;
   const montoAPagarHoy = esAnticipo ? montoAnticipo : precioTotal;
@@ -134,7 +133,11 @@ export default function CheckoutReview() {
             <div className="bg-white p-6 md:p-8 rounded-3xl border border-sand-200/80 shadow-sm">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-serif text-xl font-semibold text-forest-900">Tu encuentro</h2>
-                <Link to="/reservar/espacio" className="text-xs text-forest-800 font-medium hover:underline">
+                <Link
+                  to="/reservar/espacio"
+                  state={{ editar: datosReserva }}
+                  className="text-xs text-forest-800 font-medium hover:underline"
+                >
                   Editar selección
                 </Link>
               </div>
@@ -252,7 +255,7 @@ export default function CheckoutReview() {
                   <span className="text-base">⏳</span>
                   <div>
                     <span className="font-semibold block mb-0.5">Plazo límite de pago restante:</span>
-                    Con anticipo, el saldo de <strong>${(precioTotal - montoAnticipo).toLocaleString('es-CL')}</strong> debe pagarse antes del evento ({datosReserva.fecha}). Si no se completa dentro del plazo configurado, la reserva puede caducar por impago.
+                    Con anticipo, el saldo de <strong>${(precioTotal - montoAnticipo).toLocaleString('es-CL')}</strong> debe pagarse hasta 24 horas antes del evento{datosReserva.plazo_saldo_vence ? ` (${formatoFechaHora(datosReserva.plazo_saldo_vence)})` : ''}.
                   </div>
                 </div>
               )}
@@ -347,9 +350,9 @@ export default function CheckoutReview() {
                 </span>
               </label>
 
-              <a href="#" className="text-xs text-forest-800 font-semibold inline-flex items-center gap-1 hover:underline ml-6">
+              <Link to="/condiciones" target="_blank" className="text-xs text-forest-800 font-semibold inline-flex items-center gap-1 hover:underline ml-6">
                 Leer condiciones de reserva <ExternalLink size={12} />
-              </a>
+              </Link>
             </div>
 
             <button 
@@ -366,18 +369,7 @@ export default function CheckoutReview() {
 
       </main>
 
-      <footer className="bg-forest-900 text-white py-10 border-t border-forest-800 mt-16 text-xs text-gray-400">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2 text-white font-serif font-bold text-base">
-            <span>🍃</span> Altos de carpay
-          </div>
-          <div className="flex gap-6">
-            <a href="#" className="hover:underline">Condiciones de reserva</a>
-            <a href="#" className="hover:underline">Privacidad</a>
-            <a href="#" className="hover:underline">Contacto</a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
     </div>
   );

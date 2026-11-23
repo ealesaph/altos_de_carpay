@@ -13,6 +13,7 @@ import {
   changePassword,
   deactivateAccount,
   getConsentStatus,
+  getConsultas,
   getMyData,
   getProfile,
   hasSession,
@@ -42,6 +43,7 @@ export default function Account() {
   const [consentimiento, setConsentimiento] = useState(null);
   const [descargandoDatos, setDescargandoDatos] = useState(false);
   const [error, setError] = useState('');
+  const [consultas, setConsultas] = useState([]);
 
   useEffect(() => {
     if (!hasSession()) {
@@ -52,6 +54,9 @@ export default function Account() {
     let activo = true;
     getConsentStatus()
       .then((data) => activo && setConsentimiento(data))
+      .catch(() => {});
+    getConsultas()
+      .then((data) => activo && setConsultas(data))
       .catch(() => {});
     getProfile()
       .then((data) => {
@@ -173,7 +178,7 @@ export default function Account() {
 
             {esAdmin ? (
               <Link
-                to="/admin"
+                to="/panel"
                 className="bg-forest-800 text-white font-semibold inline-flex items-center gap-1.5 px-4 py-2 rounded-full hover:bg-forest-900"
               >
                 <LayoutDashboard size={14} /> Volver al Panel Admin
@@ -335,6 +340,46 @@ export default function Account() {
                   {cambiandoClave ? 'Actualizando…' : 'Actualizar contraseña'}
                 </button>
               </form>
+
+              {perfil?.rol !== 'Admin' && (
+                <section id="mis-consultas" className="bg-white p-6 rounded-3xl border border-sand-200/80 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="font-serif text-lg font-semibold">Mis consultas</h2>
+                    <Link to="/#contacto" className="text-xs font-semibold text-forest-800 hover:underline">
+                      Nueva consulta
+                    </Link>
+                  </div>
+                  {consultas.length === 0 && (
+                    <p className="text-xs text-gray-600">Aún no has enviado consultas.</p>
+                  )}
+                  <ul className="space-y-3">
+                    {consultas.map((c) => (
+                      <li key={c.id_consulta} className="rounded-2xl border border-sand-200 bg-sand-50/60 p-4 text-xs space-y-2">
+                        <div className="flex justify-between gap-2">
+                          <span className="font-semibold text-forest-900">{c.asunto}</span>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
+                            c.estado === 'Respondida' ? 'bg-forest-100 text-forest-800' : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {c.estado}
+                          </span>
+                        </div>
+                        <p className="text-gray-700 whitespace-pre-line">{c.mensaje}</p>
+                        <p className="text-[11px] text-gray-400">Enviada el {new Date(c.fecha_envio).toLocaleString('es-CL')}</p>
+                        {c.respuesta ? (
+                          <div className="bg-white border border-forest-200 rounded-xl p-3">
+                            <span className="block text-[11px] font-semibold text-forest-800 mb-1">
+                              Respuesta de Altos de Carpay · {new Date(c.fecha_respuesta).toLocaleString('es-CL')}
+                            </span>
+                            <p className="text-gray-800 whitespace-pre-line">{c.respuesta}</p>
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-amber-800">Te avisaremos por correo cuando la respondamos.</p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
 
               <section className="bg-white p-6 rounded-3xl border border-sand-200/80 shadow-sm space-y-3">
                 <h2 className="font-serif text-lg font-semibold">Mis datos personales</h2>
