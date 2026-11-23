@@ -98,3 +98,16 @@ class TrazabilidadHistoriasUsuarioTests(TestCase):
         self.assertIn("Jardín", nombres)
         self.assertNotIn("Cocina", nombres)
         self.assertEqual(anonimo.get("/api/v1/servicios/").status_code, 200)
+
+    def test_hu07_reserva_finalizada_no_se_cancela_ni_reabre_la_bitacora(self):
+        """HU-07: cancelar una reserva finalizada se rechaza y su bitácora sigue en solo lectura."""
+        reserva_id = self._reservar(self.jardin).data["id_reserva"]
+        Reserva.objects.filter(pk=reserva_id).update(estado=Reserva.Estado.FINALIZADO)
+        self.api.force_authenticate(user=self.admin)
+        cancelacion = self.api.post(f"/api/v1/reservas/{reserva_id}/cancelar/")
+        incidencia = self.api.post("/api/v1/incidencias/", {
+            "reserva": reserva_id, "titulo": "Daño", "descripcion": "Registro posterior al evento",
+        }, format="json")
+        self.assertEqual(cancelacion.status_code, 409)
+        self.assertEqual(incidencia.status_code, 400)
+        self.assertEqual(Reserva.objects.get(pk=reserva_id).estado, Reserva.Estado.FINALIZADO)

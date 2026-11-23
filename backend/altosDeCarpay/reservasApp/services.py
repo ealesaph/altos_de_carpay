@@ -140,7 +140,7 @@ def enviar_correo_confirmacion(reserva_id):
 @transaction.atomic
 def cancelar_reserva(*, reserva, solicitante):
     reserva = Reserva.objects.select_for_update().get(pk=reserva.pk)
-    if reserva.estado in (Reserva.Estado.CANCELADO, Reserva.Estado.EN_PROCESO):
+    if reserva.estado in (Reserva.Estado.CANCELADO, Reserva.Estado.EN_PROCESO, Reserva.Estado.FINALIZADO):
         raise ConflictoDeNegocio(f"Una reserva en estado «{reserva.estado}» no puede cancelarse.")
     if not solicitante.es_admin and reserva.estado != Reserva.Estado.PENDIENTE:
         raise PermissionDenied("Para cancelar una reserva confirmada contacte al administrador.")

@@ -160,7 +160,7 @@ export default function ClientReservations() {
                       {reserva.estado === 'Pendiente' ? 'Pagar anticipo' : 'Pagar saldo'}
                     </Link>
                   )}
-                  {(reserva.estado === 'Pendiente' || reserva.estado === 'Confirmado') && (
+                  {reserva.estado === 'Pendiente' && (
                     <button
                       type="button"
                       onClick={() => cancelar(reserva.id_reserva)}
