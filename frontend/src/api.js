@@ -162,6 +162,29 @@ export async function getMyData() {
   return apiRequest('/auth/mis-datos/');
 }
 
+export async function downloadMyDataPdf() {
+  const ruta = '/auth/mis-datos/?formato=pdf';
+  let response = await sendRequest(ruta, { method: 'GET' }, localStorage.getItem(ACCESS_TOKEN_KEY));
+  if (response.status === 401) {
+    const newAccessToken = await refreshAccessToken();
+    if (newAccessToken) {
+      response = await sendRequest(ruta, { method: 'GET' }, newAccessToken);
+    }
+  }
+  if (!response.ok) {
+    throw new Error(`No se pudo descargar el PDF (HTTP ${response.status}).`);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `mis-datos-altos-de-carpay-${new Date().toISOString().slice(0, 10)}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function registerCustomer(form) {
   return apiRequest('/auth/registro/', {
     method: 'POST',

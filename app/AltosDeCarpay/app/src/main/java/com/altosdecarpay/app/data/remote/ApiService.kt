@@ -38,6 +38,10 @@ interface ApiService {
     @GET("auth/mis-datos/")
     suspend fun getMisDatosArco(): Response<Map<String, Any>>
 
+    @Streaming
+    @GET("auth/mis-datos/?formato=pdf")
+    suspend fun getMisDatosArcoPdf(): Response<okhttp3.ResponseBody>
+
     @POST("auth/desactivar-cuenta/")
     suspend fun desactivarCuentaArco(): Response<Map<String, String>>
 

@@ -83,6 +83,16 @@ class Ley21719Tests(TestCase):
             self.assertIn(clave, r.data)
         self.assertEqual(r.data["perfil"]["correo"], "antiguo@example.com")
 
+    def test_mis_datos_formato_pdf_entrega_pdf_valido(self):
+        usuario = self._usuario_sin_consentimiento()
+        self.api.force_authenticate(usuario)
+        r = self.api.get("/api/v1/auth/mis-datos/?formato=pdf")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r["Content-Type"], "application/pdf")
+        self.assertIn(".pdf", r["Content-Disposition"])
+        self.assertTrue(r.content.startswith(b"%PDF-1.4"))
+        self.assertIn(b"%%EOF", r.content)
+
     def test_registro_de_brechas_no_se_puede_eliminar(self):
         brecha = BrechaSeguridad.objects.create(
             fecha_deteccion="2026-12-02T10:00:00-03:00", descripcion="Prueba",

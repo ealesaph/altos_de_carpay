@@ -12,9 +12,9 @@ import {
 import {
   changePassword,
   deactivateAccount,
+  downloadMyDataPdf,
   getConsentStatus,
   getConsultas,
-  getMyData,
   getProfile,
   hasSession,
   logout,
@@ -128,14 +128,8 @@ export default function Account() {
     setError('');
     setDescargandoDatos(true);
     try {
-      const datos = await getMyData();
-      const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const enlace = document.createElement('a');
-      enlace.href = url;
-      enlace.download = `mis-datos-altos-de-carpay-${new Date().toISOString().slice(0, 10)}.json`;
-      enlace.click();
-      URL.revokeObjectURL(url);
+      await downloadMyDataPdf();
+      setMensaje('Descargamos una copia en PDF de tus datos personales.');
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -396,7 +390,7 @@ export default function Account() {
                     disabled={descargandoDatos}
                     className="bg-forest-800 text-white text-xs font-semibold px-5 py-2.5 rounded-full hover:bg-forest-900 disabled:opacity-50"
                   >
-                    {descargandoDatos ? 'Preparando…' : 'Descargar mis datos (JSON)'}
+                    {descargandoDatos ? 'Preparando…' : 'Descargar mis datos (PDF)'}
                   </button>
                   <Link to="/privacidad" className="text-xs font-semibold text-forest-800 underline self-center">
                     Ver política de datos

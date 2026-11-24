@@ -1,4 +1,5 @@
 from django.db.models import Count, Q
+from django.http import HttpResponse
 from rest_framework.decorators import action
 from altosDeCarpayApp.exportacion import respuesta_exportacion
 from rest_framework import generics, mixins, status, viewsets
@@ -12,6 +13,7 @@ from altosDeCarpayApp.permissions import EsAdministrador, EsSuperusuario
 from django.utils import timezone
 from .cifrado import huella_rut
 from .models import Usuario
+from .pdf import generar_pdf_mis_datos
 from .privacidad import POLITICA_VERSION, politica_vigente, requiere_consentimiento
 from .serializers import (
     CambioPasswordSerializer,
@@ -137,7 +139,7 @@ class MisDatosArcoView(APIView):
             }
             for c in usuario.consultas.all()
         ]
-        return Response({
+        datos = {
             "fecha_emision": timezone.now(),
             "perfil": PerfilSerializer(usuario).data,
             "consentimiento_datos": usuario.consentimiento_datos,
@@ -146,7 +148,16 @@ class MisDatosArcoView(APIView):
             "total_consultas": len(consultas),
             "reservas": reservas,
             "consultas": consultas,
-        })
+        }
+        if request.query_params.get("formato") == "pdf":
+            contenido_pdf = generar_pdf_mis_datos(datos)
+            fecha_archivo = timezone.localdate().isoformat()
+            respuesta = HttpResponse(contenido_pdf, content_type="application/pdf")
+            respuesta["Content-Disposition"] = (
+                f'attachment; filename="mis-datos-altos-de-carpay-{fecha_archivo}.pdf"'
+            )
+            return respuesta
+        return Response(datos)
 
 
 class DesactivarCuentaArcoView(APIView):

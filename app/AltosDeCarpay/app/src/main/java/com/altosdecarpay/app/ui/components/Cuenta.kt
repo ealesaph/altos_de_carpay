@@ -97,19 +97,32 @@ fun OpcionesCuenta(
         OpcionCuenta(Icons.Outlined.Edit, "Editar mis datos", "Nombre, apellidos y teléfono") { dialogo = "datos" }
         OpcionCuenta(Icons.Outlined.Key, "Cambiar contraseña", "Se cerrará la sesión en todos tus dispositivos") { dialogo = "clave" }
         OpcionCuenta(Icons.Outlined.Shield, "Política de datos personales", "Cómo tratamos tus datos (Ley N° 21.719)") { dialogo = "politica" }
-        OpcionCuenta(Icons.Outlined.Download, "Descargar mis datos", "Copia de tus datos para guardar o compartir") {
+        OpcionCuenta(Icons.Outlined.Download, "Descargar mis datos", "Copia en PDF de tus datos para guardar o compartir") {
             scope.launch {
                 try {
-                    val r = api.getMisDatosArco()
-                    if (r.isSuccessful) {
-                        val json = com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(r.body())
-                        val envio = Intent(Intent.ACTION_SEND).apply {
-                            type = "application/json"
-                            putExtra(Intent.EXTRA_SUBJECT, "Mis datos en Altos de Carpay")
-                            putExtra(Intent.EXTRA_TEXT, json)
+                    val r = api.getMisDatosArcoPdf()
+                    if (r.isSuccessful && r.body() != null) {
+                        val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            r.body()!!.bytes()
                         }
-                        context.startActivity(Intent.createChooser(envio, "Guardar o compartir mis datos"))
-                    } else aviso = Formato.mensajeError(r.errorBody()?.string(), "No se pudieron obtener tus datos.")
+                        val carpeta = java.io.File(context.cacheDir, "mis-datos").apply { mkdirs() }
+                        val archivo = java.io.File(carpeta, "mis-datos-altos-de-carpay.pdf")
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            archivo.writeBytes(bytes)
+                        }
+                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            archivo
+                        )
+                        val envio = Intent(Intent.ACTION_SEND).apply {
+                            type = "application/pdf"
+                            putExtra(Intent.EXTRA_SUBJECT, "Mis datos en Altos de Carpay (PDF)")
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(Intent.createChooser(envio, "Guardar o compartir mis datos (PDF)"))
+                    } else aviso = Formato.mensajeError(r.errorBody()?.string(), "No se pudieron obtener tus datos en PDF.")
                 } catch (e: Exception) {
                     aviso = Formato.mensajeConexion(e)
                 }
