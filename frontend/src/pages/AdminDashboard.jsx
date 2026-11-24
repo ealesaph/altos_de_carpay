@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import defaultSpaceImg from '../assets/default-space.svg';
 import { useConfirmacion } from '../components/ConfirmDialog.jsx';
-import { formatoCLP, formatoFechaHora } from '../reglas.js';
+import { formatoCLP, formatoFechaHora, codigoReserva } from '../reglas.js';
 import {
   cancelReservation,
   changeReservationStatus,
@@ -253,7 +253,7 @@ export default function AdminDashboard() {
     const tipo = Number(reserva.monto_pagado) > 0 ? 'Saldo' : 'Anticipo';
     const monto = tipo === 'Saldo' ? reserva.saldo_pendiente : reserva.monto_anticipo;
     const acepta = await confirmar({
-      titulo: `¿Registrar ${tipo.toLowerCase()} de RES-${reserva.id_reserva}?`,
+      titulo: `¿Registrar ${tipo.toLowerCase()} de ${codigoReserva(reserva.id_reserva)}?`,
       mensaje: (
         <p>
           Se registrará un pago de <strong>{formatoCLP(monto)}</strong> por {metodoPagoManual.toLowerCase()} a nombre de{' '}
@@ -268,7 +268,7 @@ export default function AdminDashboard() {
         tipo_pago: tipo,
         metodo_pago: metodoPagoManual,
       });
-      notificar(`Pago (${tipo} · ${metodoPagoManual}) registrado en reserva RES-${reserva.id_reserva}.`);
+      notificar(`Pago (${tipo} · ${metodoPagoManual}) registrado en reserva ${codigoReserva(reserva.id_reserva)}.`);
     });
   };
 
@@ -280,14 +280,14 @@ export default function AdminDashboard() {
       Confirmado: 'La reserva quedará confirmada aunque el anticipo no se haya pagado en el sistema.',
     }[nuevoEstado];
     const acepta = await confirmar({
-      titulo: `¿Pasar RES-${reserva.id_reserva} a «${nuevoEstado}»?`,
+      titulo: `¿Pasar ${codigoReserva(reserva.id_reserva)} a «${nuevoEstado}»?`,
       mensaje: <p>{detalle} Este cambio no se puede deshacer.</p>,
       textoConfirmar: `Pasar a ${nuevoEstado}`,
     });
     if (!acepta) return;
     return ejecutarAccionReserva(reserva.id_reserva, async () => {
       await changeReservationStatus(reserva.id_reserva, nuevoEstado);
-      notificar(`Reserva RES-${reserva.id_reserva} actualizada a «${nuevoEstado}».`);
+      notificar(`Reserva ${codigoReserva(reserva.id_reserva)} actualizada a «${nuevoEstado}».`);
     });
   };
 
@@ -306,7 +306,7 @@ export default function AdminDashboard() {
     }
     let origen = 'Cliente';
     const acepta = await confirmar({
-      titulo: `¿Cancelar la reserva RES-${reserva.id_reserva}?`,
+      titulo: `¿Cancelar la reserva ${codigoReserva(reserva.id_reserva)}?`,
       mensaje: (
         <p>
           Cliente: {reserva.cliente} · Pagado: <strong>{formatoCLP(porCliente.monto_pagado)}</strong>. La cancelación no se
@@ -333,13 +333,13 @@ export default function AdminDashboard() {
     if (!acepta) return;
     return ejecutarAccionReserva(reserva.id_reserva, async () => {
       const cancelada = await cancelReservation(reserva.id_reserva, origen);
-      notificar(`Reserva RES-${reserva.id_reserva} cancelada. Devolución a registrar: ${formatoCLP(cancelada.monto_devolucion)}.`);
+      notificar(`Reserva ${codigoReserva(reserva.id_reserva)} cancelada. Devolución a registrar: ${formatoCLP(cancelada.monto_devolucion)}.`);
     });
   };
 
   const manejarRegistrarDevolucion = async (reserva) => {
     const acepta = await confirmar({
-      titulo: `¿Registrar la devolución de RES-${reserva.id_reserva}?`,
+      titulo: `¿Registrar la devolución de ${codigoReserva(reserva.id_reserva)}?`,
       mensaje: (
         <p>
           Confirma que ya transferiste <strong>{formatoCLP(reserva.monto_devolucion)}</strong> a {reserva.cliente}. El registro
@@ -351,7 +351,7 @@ export default function AdminDashboard() {
     if (!acepta) return;
     return ejecutarAccionReserva(reserva.id_reserva, async () => {
       await registerRefund(reserva.id_reserva);
-      notificar(`Devolución de RES-${reserva.id_reserva} registrada.`);
+      notificar(`Devolución de ${codigoReserva(reserva.id_reserva)} registrada.`);
     });
   };
 
@@ -844,7 +844,7 @@ export default function AdminDashboard() {
                             onClick={() => setReservaExpandidaId(abierta ? null : reserva.id_reserva)}
                             className={`cursor-pointer transition-colors ${abierta ? 'bg-forest-50/40' : 'hover:bg-sand-50/60'}`}
                           >
-                            <td className="py-4 px-6 font-mono text-gray-500">RES-{reserva.id_reserva}</td>
+                            <td className="py-4 px-6 font-mono text-gray-500">{codigoReserva(reserva.id_reserva)}</td>
                             <td className="py-4 px-6">
                               <div className="font-semibold text-gray-800">{reserva.cliente}</div>
                               <div className="text-[11px] text-gray-400">

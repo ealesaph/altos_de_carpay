@@ -55,10 +55,19 @@ async function refreshAccessToken() {
 }
 
 export async function apiRequest(path, options = {}) {
+  const habiaSesion = Boolean(localStorage.getItem(ACCESS_TOKEN_KEY));
   let response = await sendRequest(path, options, localStorage.getItem(ACCESS_TOKEN_KEY));
   if (response.status === 401 && !path.startsWith('/auth/')) {
     const newAccessToken = await refreshAccessToken();
     if (newAccessToken) response = await sendRequest(path, options, newAccessToken);
+    else if (habiaSesion && !localStorage.getItem(ACCESS_TOKEN_KEY)) {
+      // La sesión no se pudo renovar (refresh vencido o revocado): se vuelve al inicio de sesión con
+      // un aviso, en vez de dejar la pantalla con el mensaje técnico del token y los datos en cero.
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.assign('/login?sesion=expirada');
+      }
+      throw new Error('Tu sesión expiró. Inicia sesión nuevamente.');
+    }
   }
 
   const data = parseResponse(await response.text());

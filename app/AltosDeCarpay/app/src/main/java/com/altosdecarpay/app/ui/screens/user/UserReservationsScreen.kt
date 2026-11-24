@@ -22,7 +22,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.altosdecarpay.app.data.SessionState
 import com.altosdecarpay.app.data.remote.NetworkResult
+import com.altosdecarpay.app.ui.components.EstadoChip
+import com.altosdecarpay.app.ui.components.MensajeError
 import com.altosdecarpay.app.ui.theme.*
+import com.altosdecarpay.app.ui.utils.Formato
 import com.altosdecarpay.app.ui.viewmodel.ReservasViewModel
 
 @Composable
@@ -32,6 +35,7 @@ fun UserReservationsScreen(
     onOpenExtraServices: (String) -> Unit = {},
     onOpenMySpaces: (String) -> Unit = {},
     onOpenObservations: (String) -> Unit = {},
+    onNuevaReserva: () -> Unit = {},
     onTabSelected: (UserTab) -> Unit = {}
 ) {
     var selectedSegment by remember { mutableStateOf("Próximas") }
@@ -41,42 +45,17 @@ fun UserReservationsScreen(
         reservasViewModel.loadReservas()
     }
 
-    val fetchedReservas = (reservasState as? NetworkResult.Success)?.data ?: emptyList()
-    val allReservas = if (fetchedReservas.isEmpty()) {
-        listOf(
-            com.altosdecarpay.app.data.model.ReservaResponse(
-                idReserva = 261,
-                usuario = 2,
-                cliente = "Camila Rojas",
-                correoCliente = "camila@carpay.com",
-                fecha = "2025-02-25",
-                horaInicio = "13:00:00",
-                horaFin = "17:00:00",
-                horasReservadas = 4,
-                estado = "Confirmado",
-                montoTotal = "35000.00",
-                montoAnticipo = "15000.00",
-                montoPagado = "15000.00",
-                saldoPendiente = "20000.00",
-                plazoAnticipoVence = null,
-                fechaCreacion = "2025-02-20T10:00:00Z",
-                tokenQr = "QR-RES-0261",
-                sectores = listOf(com.altosdecarpay.app.data.model.SectorReservadoResponse(1, "Un almuerzo en familia", 4, "8750.00", "35000.00")),
-                servicios = emptyList(),
-                pagos = emptyList()
-            )
-        )
-    } else {
-        fetchedReservas
-    }
+    // Solo reservas reales: ya no se muestra una reserva de ejemplo cuando la lista está vacía o falla.
+    val allReservas = (reservasState as? NetworkResult.Success)?.data ?: emptyList()
     val proximas = remember(allReservas) {
-        allReservas.filter { it.estado in listOf("Pendiente", "Confirmado", "En Proceso") }
+        allReservas.filter { it.estado in Formato.estadosVigentes }.sortedWith(compareBy({ it.fecha }, { it.horaInicio }))
     }
+    // Historial: todo lo que ya no está vigente (Finalizado, Cancelado, No se presentó y estados futuros).
     val historial = remember(allReservas) {
-        allReservas.filter { it.estado in listOf("Finalizado", "Cancelado") }
+        allReservas.filter { it.estado !in Formato.estadosVigentes }
     }
 
-    val nombreUsuario = SessionState.userName.ifBlank { "Usuario" }
+    val nombreUsuario = SessionState.userName
     val reservasMostradas = if (selectedSegment == "Próximas") proximas else historial
 
     Scaffold(
@@ -94,7 +73,7 @@ fun UserReservationsScreen(
         ) {
             UserScreenHeader(
                 title = "Tus buenos momentos",
-                subtitle = "Hola, $nombreUsuario. Tu próximo encuentro empieza aquí."
+                subtitle = if (nombreUsuario.isBlank()) "Tu próximo encuentro empieza aquí." else "Hola, $nombreUsuario. Tu próximo encuentro empieza aquí."
             )
 
             // Segmented Control
@@ -131,7 +110,10 @@ fun UserReservationsScreen(
                 }
             }
 
-            if (reservasState is NetworkResult.Loading) {
+            val estadoCarga = reservasState
+            if (estadoCarga is NetworkResult.Error) {
+                MensajeError(estadoCarga.message) { reservasViewModel.loadReservas() }
+            } else if (reservasState is NetworkResult.Loading) {
                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = CarpayPrimaryGreen)
                 }
@@ -157,6 +139,8 @@ fun UserReservationsScreen(
                 }
             } else {
                 reservasMostradas.forEach { reserva ->
+                    val vigente = reserva.estado in Formato.estadosVigentes
+                    val conAcceso = reserva.estado in Formato.estadosConAcceso
                     Surface(
                         shape = RoundedCornerShape(18.dp),
                         color = CarpayWhite,
@@ -194,7 +178,7 @@ fun UserReservationsScreen(
                                         .clickable { onOpenReservaDetail(reserva.idFormateado) }
                                 ) {
                                     Text(
-                                        text = "Ver QR y detalle →",
+                                        text = if (conAcceso) "Ver QR y detalle →" else "Ver detalle →",
                                         fontSize = 11.sp,
                                         color = CarpayWhite,
                                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
@@ -209,15 +193,7 @@ fun UserReservationsScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(reserva.idFormateado, fontSize = 12.sp, color = CarpayTextSecondary)
-                                    Surface(shape = RoundedCornerShape(10.dp), color = CarpayGreenLight) {
-                                        Text(
-                                            reserva.estado,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = CarpayPrimaryGreen,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
-                                        )
-                                    }
+                                    EstadoChip(reserva.estado)
                                 }
 
                                 Spacer(modifier = Modifier.height(6.dp))
@@ -232,12 +208,22 @@ fun UserReservationsScreen(
                                     Icon(Icons.Outlined.CalendarToday, null, tint = CarpayTextSecondary, modifier = Modifier.size(15.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        "${reserva.fecha} · ${reserva.horaInicio.take(5)} – ${reserva.horaFin?.take(5) ?: "${reserva.horasReservadas}h"}",
+                                        "${Formato.fecha(reserva.fecha)} · ${Formato.hora(reserva.horaInicio)} – ${reserva.horaFin?.let { Formato.hora(it) } ?: "${reserva.horasReservadas} h"}",
                                         fontSize = 13.sp,
                                         color = CarpayTextPrimary
                                     )
                                 }
 
+                                if (reserva.estado == "Confirmado" && reserva.saldo.signum() > 0) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "Saldo pendiente ${Formato.clp(reserva.saldoPendiente)} · págalo hasta ${Formato.fechaHora(reserva.plazoSaldoVence)}",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = CarpayAmberText
+                                    )
+                                }
+                                if (vigente) {
                                 Spacer(modifier = Modifier.height(14.dp))
 
                                 Surface(
@@ -285,10 +271,24 @@ fun UserReservationsScreen(
                                         )
                                     }
                                 }
+                                }
                             }
                         }
                     }
                 }
+            }
+
+            OutlinedButton(
+                onClick = onNuevaReserva,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, CarpayPrimaryGreen),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+            ) {
+                Icon(Icons.Outlined.AddCircleOutline, null, tint = CarpayPrimaryGreen, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Nueva reserva", fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = CarpayPrimaryGreen)
             }
 
             Button(

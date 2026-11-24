@@ -31,6 +31,23 @@ fun AdminSpacesControlScreen(
     onTabSelected: (AdminTab) -> Unit = {}
 ) {
     val sectoresState by serviciosViewModel.sectores.collectAsState()
+    // Cambiar el estado de un sector afecta al catálogo público para todos los clientes: se confirma antes.
+    var cambioPendiente by remember { mutableStateOf<Pair<com.altosdecarpay.app.data.model.SectorResponse, String>?>(null) }
+    cambioPendiente?.let { (sector, nuevo) ->
+        com.altosdecarpay.app.ui.components.DialogoConfirmacion(
+            titulo = if (nuevo == "Mantencion") "¿Poner «${sector.nombre}» en mantención?" else "¿Habilitar «${sector.nombre}»?",
+            mensaje = if (nuevo == "Mantencion")
+                "El sector dejará de ofrecerse en la web y en la app para todas las fechas, no solo para esta reserva. Las reservas ya hechas no se cancelan."
+            else "El sector volverá a ofrecerse en la web y en la app para nuevas reservas.",
+            textoConfirmar = if (nuevo == "Mantencion") "Poner en mantención" else "Habilitar",
+            peligro = nuevo == "Mantencion",
+            onCancelar = { cambioPendiente = null },
+            onConfirmar = {
+                cambioPendiente = null
+                serviciosViewModel.actualizarEstadoSector(sector.idSector, nuevo)
+            }
+        )
+    }
 
     LaunchedEffect(Unit) {
         serviciosViewModel.loadSectores()
@@ -55,14 +72,14 @@ fun AdminSpacesControlScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             AdminScreenHeader(
-                title = "Control de espacios",
-                subtitle = "Sectores del recinto registrados en la base de datos.",
+                title = "Estado de los espacios",
+                subtitle = "Disponibilidad general de los sectores del recinto (afecta al catálogo público).",
                 showBackButton = true,
                 onBackClick = onBackClick
             )
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Sectores disponibles", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
+                Text("Sectores del recinto", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
                 Text("${sectores.size} sectores", fontSize = 12.sp, color = CarpayTextSecondary)
             }
 
@@ -72,7 +89,10 @@ fun AdminSpacesControlScreen(
                 CounterBox("$countInactivos", "Inactivos", CarpayRedText, Modifier.weight(1f))
             }
 
-            if (sectoresState is NetworkResult.Loading) {
+            val estadoCarga = sectoresState
+            if (estadoCarga is NetworkResult.Error) {
+                com.altosdecarpay.app.ui.components.MensajeError(estadoCarga.message) { serviciosViewModel.loadSectores() }
+            } else if (sectoresState is NetworkResult.Loading) {
                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = CarpayPrimaryGreen)
                 }
@@ -113,14 +133,14 @@ fun AdminSpacesControlScreen(
                                 Surface(shape = RoundedCornerShape(8.dp), color = bg) {
                                     Text(labelEstado, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = fg, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                                 }
-                                Text("$${sector.valorHora} / hora", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = CarpayTextPrimary)
+                                Text("${com.altosdecarpay.app.ui.utils.Formato.clp(sector.valorHora)} / hora", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = CarpayTextPrimary)
                             }
 
                             Spacer(modifier = Modifier.height(12.dp))
 
                             if (sector.estado == "Disponible") {
                                 OutlinedButton(
-                                    onClick = { serviciosViewModel.actualizarEstadoSector(sector.idSector, "Mantencion") },
+                                    onClick = { cambioPendiente = sector to "Mantencion" },
                                     shape = RoundedCornerShape(10.dp),
                                     border = BorderStroke(1.dp, CarpayAmberText.copy(alpha = 0.4f)),
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = CarpayAmberText),
@@ -132,7 +152,7 @@ fun AdminSpacesControlScreen(
                                 }
                             } else {
                                 Button(
-                                    onClick = { serviciosViewModel.actualizarEstadoSector(sector.idSector, "Disponible") },
+                                    onClick = { cambioPendiente = sector to "Disponible" },
                                     shape = RoundedCornerShape(10.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = CarpayPrimaryGreen, contentColor = CarpayWhite),
                                     modifier = Modifier.fillMaxWidth()

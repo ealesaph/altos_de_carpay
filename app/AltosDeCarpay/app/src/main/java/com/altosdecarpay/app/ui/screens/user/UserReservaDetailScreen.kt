@@ -19,19 +19,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.altosdecarpay.app.data.remote.NetworkResult
+import com.altosdecarpay.app.ui.components.EstadoChip
+import com.altosdecarpay.app.ui.components.MensajeError
 import com.altosdecarpay.app.ui.theme.*
+import com.altosdecarpay.app.ui.utils.Formato
 import com.altosdecarpay.app.ui.utils.QrCodeGenerator
 import com.altosdecarpay.app.ui.viewmodel.ReservasViewModel
 
 @Composable
 fun UserReservaDetailScreen(
-    reservaId: String = "RES-0001",
+    reservaId: String,
     reservasViewModel: ReservasViewModel = viewModel(),
     onBackClick: () -> Unit = {},
     onOpenTickets: () -> Unit = {},
+    onPagar: () -> Unit = {},
     onTabSelected: (UserTab) -> Unit = {}
 ) {
-    val numericId = remember(reservaId) { QrCodeGenerator.parseReservaId(reservaId) ?: 1 }
+    val numericId = remember(reservaId) { QrCodeGenerator.parseReservaId(reservaId) ?: 0 }
     val detalleState by reservasViewModel.reservaDetalle.collectAsState()
 
     LaunchedEffect(numericId) {
@@ -71,17 +75,7 @@ fun UserReservaDetailScreen(
                     }
                 }
                 is NetworkResult.Error -> {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = CarpayRedBg,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = (detalleState as NetworkResult.Error).message,
-                            color = CarpayRedText,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
+                    MensajeError((detalleState as NetworkResult.Error).message) { reservasViewModel.loadReservaDetalle(numericId) }
                 }
                 else -> {
                     if (reserva != null) {
@@ -95,15 +89,7 @@ fun UserReservaDetailScreen(
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text(reserva.idFormateado, fontSize = 12.sp, color = CarpayTextSecondary)
-                                    Surface(shape = RoundedCornerShape(10.dp), color = CarpayGreenLight) {
-                                        Text(
-                                            text = reserva.estado,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = CarpayPrimaryGreen,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
-                                        )
-                                    }
+                                    EstadoChip(reserva.estado)
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
@@ -117,7 +103,7 @@ fun UserReservaDetailScreen(
                                     Icon(Icons.Outlined.CalendarToday, null, tint = CarpayTextSecondary, modifier = Modifier.size(15.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "${reserva.fecha} · ${reserva.horaInicio.take(5)} – ${reserva.horaFin?.take(5) ?: "${reserva.horasReservadas}h"}",
+                                        text = "${Formato.fecha(reserva.fecha)} · ${Formato.hora(reserva.horaInicio)} – ${reserva.horaFin?.let { Formato.hora(it) } ?: "${reserva.horasReservadas} h"}",
                                         fontSize = 13.sp,
                                         color = CarpayTextPrimary
                                     )
@@ -127,7 +113,7 @@ fun UserReservaDetailScreen(
                                     Icon(Icons.Outlined.Place, null, tint = CarpayTextSecondary, modifier = Modifier.size(15.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = reserva.sectores.joinToString(", ") { "${it.nombre} (${it.horas}h)" },
+                                        text = reserva.sectores.joinToString(", ") { "${it.nombre} (${it.horas} h)" },
                                         fontSize = 13.sp,
                                         color = CarpayTextSecondary
                                     )
@@ -135,8 +121,8 @@ fun UserReservaDetailScreen(
                             }
                         }
 
-                        // Tarjeta QR de acceso REAL
-                        Surface(
+                        // El QR solo se muestra mientras sirve para entrar (confirmada o en curso).
+                        if (reserva.estado in Formato.estadosConAcceso) Surface(
                             shape = RoundedCornerShape(16.dp),
                             color = CarpayWhite,
                             border = BorderStroke(1.dp, CarpayInputBorder),
@@ -165,12 +151,33 @@ fun UserReservaDetailScreen(
                                 }
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
-                                    text = "${reserva.idFormateado} · Estado: ${reserva.estado}",
+                                    text = "${reserva.idFormateado} · ${Formato.estado(reserva.estado)}",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = CarpayPrimaryGreen
                                 )
                             }
+                        }
+
+                        else Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = CarpayAmberBg,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = when (reserva.estado) {
+                                    "Pendiente" -> "Tu QR de acceso aparecerá cuando pagues el anticipo. Págalo aquí mismo con el botón «Pagar»."
+                                    "Cancelado" -> if ((reserva.montoDevolucion?.toBigDecimalOrNull()?.signum() ?: 0) > 0)
+                                        "Reserva cancelada. Devolución: ${Formato.clp(reserva.montoDevolucion)}" +
+                                            (if (reserva.devolucionRealizadaEn != null) " (realizada)." else " (pendiente; te contactaremos para transferirla).")
+                                    else "Reserva cancelada. Ya no tiene código de acceso."
+                                    "No se presentó" -> "No se registró tu llegada en el horario reservado; según las condiciones se conserva el anticipo."
+                                    else -> "Esta reserva ya terminó, así que no tiene código de acceso."
+                                },
+                                fontSize = 13.sp,
+                                color = CarpayAmberText,
+                                modifier = Modifier.padding(16.dp)
+                            )
                         }
 
                         // Resumen financiero real
@@ -184,17 +191,43 @@ fun UserReservaDetailScreen(
                                 Text("Resumen de pagos", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text("Monto total", fontSize = 13.sp, color = CarpayTextSecondary)
-                                    Text("$${reserva.montoTotal}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = CarpayTextPrimary)
+                                    Text(Formato.clp(reserva.montoTotal), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = CarpayTextPrimary)
                                 }
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text("Pagado", fontSize = 13.sp, color = CarpayTextSecondary)
-                                    Text("$${reserva.montoPagado ?: "0.00"}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = CarpayPrimaryGreen)
+                                    Text(Formato.clp(reserva.montoPagado), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = CarpayPrimaryGreen)
                                 }
                                 HorizontalDivider(color = CarpayInputBorder)
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text("Saldo pendiente", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = CarpayTextPrimary)
-                                    Text("$${reserva.saldoPendiente ?: "0.00"}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = CarpayAmberText)
+                                    Text(Formato.clp(reserva.saldoPendiente), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = CarpayAmberText)
                                 }
+                            }
+                        }
+
+                        if (reserva.estado == "Confirmado" && reserva.saldo.signum() > 0) {
+                            Text(
+                                "Paga el saldo hasta 24 horas antes del evento: ${Formato.fechaHora(reserva.plazoSaldoVence)}.",
+                                fontSize = 12.sp,
+                                color = CarpayAmberText
+                            )
+                        }
+
+                        val opcionesPago = opcionesDePago(reserva)
+                        if (opcionesPago.isNotEmpty()) {
+                            Button(
+                                onClick = onPagar,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = CarpayPrimaryGreen, contentColor = CarpayWhite),
+                                modifier = Modifier.fillMaxWidth().height(50.dp)
+                            ) {
+                                Icon(Icons.Outlined.CreditCard, null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    if (opcionesPago.first().tipo == "Saldo") "Pagar saldo ${Formato.clp(opcionesPago.first().monto)}"
+                                    else "Pagar anticipo ${Formato.clp(opcionesPago.first().monto)}",
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                         }
 
@@ -209,7 +242,7 @@ fun UserReservaDetailScreen(
                         ) {
                             Icon(Icons.Outlined.ChatBubbleOutline, null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Consultas y reclamos de esta reserva", fontWeight = FontWeight.SemiBold)
+                            Text("Enviar una consulta", fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }

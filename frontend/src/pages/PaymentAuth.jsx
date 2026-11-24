@@ -4,6 +4,7 @@ import { Check, ArrowRight, XCircle, CheckCircle } from 'lucide-react';
 import { createPayment, getReservation } from '../api.js';
 import defaultSpaceImg from '../assets/default-space.svg';
 import Footer from '../components/Footer.jsx';
+import { codigoReserva } from '../reglas.js';
 
 export default function PaymentAuth() {
   const navigate = useNavigate();
@@ -152,7 +153,7 @@ export default function PaymentAuth() {
               <div>
                 <span className="text-gray-400 block mb-0.5">Concepto</span>
                 <span className="font-semibold text-gray-700">{conceptoPago}</span>
-                <span className="text-[11px] text-gray-400 block mt-1">Ref: RES-{datosReserva.id_reserva}</span>
+                <span className="text-[11px] text-gray-400 block mt-1">Ref: {codigoReserva(datosReserva.id_reserva)}</span>
               </div>
               <div className="text-right">
                 <span className="text-gray-400 block mb-0.5">Tarjeta de prueba</span>

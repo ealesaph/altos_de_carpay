@@ -8,7 +8,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -25,8 +27,15 @@ fun AdminProfileScreen(
     onNavigateToBitacora: () -> Unit = {},
     onNavigateToProducts: () -> Unit = {},
     onLogout: () -> Unit = {},
+    onSesionTerminada: (String) -> Unit = {},
     onTabSelected: (AdminTab) -> Unit = {}
 ) {
+    val perfilState by authViewModel?.perfil?.collectAsState() ?: remember { mutableStateOf(null) }
+    LaunchedEffect(Unit) { authViewModel?.loadPerfil() }
+    var perfil by remember(perfilState) {
+        mutableStateOf((perfilState as? com.altosdecarpay.app.data.remote.NetworkResult.Success)?.data
+            ?: com.altosdecarpay.app.data.SessionState.currentUser)
+    }
     Scaffold(
         topBar = { AdminTopBar() },
         bottomBar = { AdminBottomBar(selectedTab = AdminTab.PERFIL, onTabSelected = onTabSelected) },
@@ -36,6 +45,7 @@ fun AdminProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -44,21 +54,35 @@ fun AdminProfileScreen(
                 subtitle = "Herramientas internas y configuración de Altos de Carpay."
             )
 
+            // Antes no se mostraba quién había iniciado sesión.
+            com.altosdecarpay.app.ui.components.TarjetaPerfil(
+                perfil = perfil,
+                rolVisible = if (com.altosdecarpay.app.data.SessionState.userInfo?.isSuperuser == true) "Superusuario" else "Personal administrador"
+            )
+
             ProfileOptionCard(
                 icon = Icons.Outlined.EditNote,
                 title = "Bitácora de incidencias",
-                subtitle = "Observaciones internas por reserva y auditoría",
+                subtitle = "Todas las incidencias registradas; para agregar una, abre la reserva",
                 onClick = onNavigateToBitacora
             )
 
             ProfileOptionCard(
                 icon = Icons.Outlined.Storefront,
-                title = "Productos externos",
-                subtitle = "Menú de servicios extra publicados para reservas",
+                title = "Servicios extra",
+                subtitle = "Catálogo de servicios que los clientes pueden agregar",
                 onClick = onNavigateToProducts
             )
 
-            Spacer(modifier = Modifier.weight(1f))
+            Text("Mi cuenta", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
+            com.altosdecarpay.app.ui.components.OpcionesCuenta(
+                perfil = perfil,
+                esCliente = false,
+                onPerfilActualizado = { perfil = it },
+                onSesionTerminada = { mensaje -> authViewModel?.logout { onSesionTerminada(mensaje) } ?: onSesionTerminada(mensaje) }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedButton(
                 onClick = {

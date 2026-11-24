@@ -22,13 +22,16 @@ import com.altosdecarpay.app.ui.viewmodel.ConsultasViewModel
 
 @Composable
 fun UserObservationsScreen(
-    reservaId: String = "RES-0261",
+    reservaId: String,
     consultasViewModel: ConsultasViewModel? = viewModel(),
     onBackClick: () -> Unit = {},
     onTabSelected: (UserTab) -> Unit = {}
 ) {
     var asunto by remember { mutableStateOf("") }
     var mensaje by remember { mutableStateOf("") }
+    var aviso by remember { mutableStateOf<String?>(null) }
+    // Las consultas enviadas desde una reserva llevan su número en el asunto, para que el equipo sepa de cuál se trata.
+    val prefijo = "${reservaId}: "
 
     LaunchedEffect(Unit) {
         consultasViewModel?.loadConsultas()
@@ -38,9 +41,9 @@ fun UserObservationsScreen(
 
     val observaciones = remember(consultasState) {
         when (val state = consultasState) {
-            is NetworkResult.Success -> state.data.map { c ->
+            is NetworkResult.Success -> state.data.filter { it.asunto.startsWith(prefijo) }.map { c ->
                 Triple(
-                    "${c.idFormateado} · ${c.asunto}",
+                    "${c.idFormateado} · ${c.asunto.removePrefix(prefijo)}",
                     c.mensaje,
                     c.respuesta?.ifBlank { "Pendiente de respuesta del equipo" } ?: "Pendiente de respuesta del equipo"
                 )
@@ -84,7 +87,7 @@ fun UserObservationsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Deja una observación", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = CarpayTextPrimary)
+                    Text("Escríbenos sobre esta reserva", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = CarpayTextPrimary)
                     OutlinedTextField(
                         value = asunto,
                         onValueChange = { asunto = it },
@@ -101,12 +104,14 @@ fun UserObservationsScreen(
                     )
                     Button(
                         onClick = {
-                            if (asunto.isNotBlank() && mensaje.isNotBlank()) {
-                                if (consultasViewModel != null) {
-                                    consultasViewModel.crearConsulta(asunto, mensaje)
+                            if (asunto.isBlank() || mensaje.isBlank()) {
+                                aviso = "Escribe el asunto y el mensaje antes de enviar."
+                            } else {
+                                consultasViewModel?.crearConsulta(prefijo + asunto.trim(), mensaje.trim()) { ok ->
+                                    aviso = if (ok) "Consulta enviada. Te avisaremos por correo cuando la respondamos."
+                                    else "No se pudo enviar la consulta. Inténtalo nuevamente."
+                                    if (ok) { asunto = ""; mensaje = "" }
                                 }
-                                asunto = ""
-                                mensaje = ""
                             }
                         },
                         shape = RoundedCornerShape(12.dp),
@@ -117,12 +122,13 @@ fun UserObservationsScreen(
                     ) {
                         Icon(Icons.AutoMirrored.Outlined.Send, null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Enviar observación", fontWeight = FontWeight.SemiBold)
+                        Text("Enviar consulta", fontWeight = FontWeight.SemiBold)
                     }
+                    if (aviso != null) Text(aviso!!, fontSize = 13.sp, color = CarpayPrimaryGreen)
                 }
             }
 
-            Text("Tus observaciones (${observaciones.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = CarpayTextPrimary)
+            Text("Consultas de esta reserva (${observaciones.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = CarpayTextPrimary)
 
             observaciones.forEach { (titulo, consulta, respuesta) ->
                 Surface(

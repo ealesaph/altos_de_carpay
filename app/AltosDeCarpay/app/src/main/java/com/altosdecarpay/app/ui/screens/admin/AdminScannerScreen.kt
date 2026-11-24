@@ -82,39 +82,68 @@ fun AdminScannerScreen(
         }
     }
 
+    // Primero se busca y se muestra la reserva; el movimiento se registra solo cuando el encargado lo confirma
+    // (antes «Buscar» registraba la entrada de inmediato, sin mostrar a quién correspondía).
+    var reservaEncontrada by remember { mutableStateOf<com.altosdecarpay.app.data.model.ReservaResponse?>(null) }
+
     val procesarCodigo: (String) -> Unit = { codigo ->
-        if (!isProcessing && codigo.isNotBlank()) {
+        if (!isProcessing && reservaEncontrada == null && codigo.isNotBlank()) {
             isProcessing = true
             errorMessage = null
             reservasViewModel.buscarReservaPorCodigo(
                 codigoRaw = codigo,
                 onFound = { reserva ->
-                    if (movimientoSeleccionado == "Ingreso") {
-                        if (reserva.estado == "Confirmado") {
-                            reservasViewModel.validarAcceso(
-                                id = reserva.idReserva,
-                                tipoRegistro = "Entrada",
-                                onSuccess = {
-                                    isProcessing = false
-                                    onQrReadSuccess(reserva.idFormateado, "Ingreso")
-                                },
-                                onError = { msg ->
-                                    isProcessing = false
-                                    errorMessage = msg
-                                }
-                            )
-                        } else {
-                            isProcessing = false
-                            onQrReadSuccess(reserva.idFormateado, "Ingreso")
-                        }
-                    } else {
-                        isProcessing = false
-                        onQrReadSuccess(reserva.idFormateado, "Salida")
-                    }
+                    isProcessing = false
+                    reservaEncontrada = reserva
                 },
                 onError = { msg ->
                     isProcessing = false
                     errorMessage = msg
+                }
+            )
+        }
+    }
+
+    reservaEncontrada?.let { reserva ->
+        val esIngreso = movimientoSeleccionado == "Ingreso"
+        val estadoValido = if (esIngreso) reserva.estado == "Confirmado" else reserva.estado == "En Proceso"
+        val resumen = "${reserva.cliente}\n${reserva.sectores.joinToString(", ") { it.nombre }}\n" +
+            "${com.altosdecarpay.app.ui.utils.Formato.fecha(reserva.fecha)} · ${com.altosdecarpay.app.ui.utils.Formato.hora(reserva.horaInicio)} – ${reserva.horaFin?.let { com.altosdecarpay.app.ui.utils.Formato.hora(it) } ?: ""}\n" +
+            "Estado: ${com.altosdecarpay.app.ui.utils.Formato.estado(reserva.estado)}"
+        if (!estadoValido) {
+            AlertDialog(
+                onDismissRequest = { reservaEncontrada = null },
+                title = { Text("${reserva.idFormateado}: no se puede registrar ${if (esIngreso) "el ingreso" else "la salida"}", fontWeight = FontWeight.Bold) },
+                text = {
+                    Text(resumen + "\n\n" + if (esIngreso) "Solo se registra el ingreso de reservas confirmadas." else "Solo se registra la salida de reservas en curso.")
+                },
+                confirmButton = { TextButton(onClick = { reservaEncontrada = null }) { Text("Entendido") } }
+            )
+        } else {
+            com.altosdecarpay.app.ui.components.DialogoConfirmacion(
+                titulo = "¿Registrar ${if (esIngreso) "ingreso" else "salida"} de ${reserva.idFormateado}?",
+                mensaje = resumen,
+                textoConfirmar = if (esIngreso) "Registrar ingreso" else "Continuar con la salida",
+                onCancelar = { reservaEncontrada = null },
+                onConfirmar = {
+                    reservaEncontrada = null
+                    if (esIngreso) {
+                        isProcessing = true
+                        reservasViewModel.validarAcceso(
+                            id = reserva.idReserva,
+                            tipoRegistro = "Entrada",
+                            onSuccess = {
+                                isProcessing = false
+                                onQrReadSuccess(reserva.idFormateado, "Ingreso")
+                            },
+                            onError = { msg ->
+                                isProcessing = false
+                                errorMessage = msg
+                            }
+                        )
+                    } else {
+                        onQrReadSuccess(reserva.idFormateado, "Salida")
+                    }
                 }
             )
         }
@@ -318,7 +347,7 @@ fun AdminScannerScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Apunta la cámara al código QR de la reserva del cliente para validar el acceso en la base de datos.",
+                    text = "Apunta la cámara al código QR de la reserva. Antes de registrar el movimiento verás los datos de la reserva para confirmarlo.",
                     fontSize = 12.sp,
                     color = CarpayTextSecondary,
                     lineHeight = 16.sp
@@ -376,7 +405,7 @@ fun AdminScannerScreen(
             ) {
                 Icon(Icons.Outlined.Search, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Buscar reserva en BD", fontWeight = FontWeight.SemiBold)
+                Text("Buscar reserva", fontWeight = FontWeight.SemiBold)
             }
         }
     }

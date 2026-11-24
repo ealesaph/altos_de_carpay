@@ -46,6 +46,7 @@ data class UsuarioInfo(
     @SerializedName("id_usuario") val idUsuario: Int,
     val nombre: String,
     val rol: String,
+    @SerializedName("is_superuser") val isSuperuser: Boolean = false,
     // Ley N° 21.719: true si el titular aún no acepta la versión vigente de la política de datos
     @SerializedName("requiere_consentimiento") val requiereConsentimiento: Boolean = false
 )

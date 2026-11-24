@@ -17,16 +17,25 @@ class TokenAuthenticator(
 ) : Authenticator {
 
     override fun authenticate(route: Route?, response: Response): Request? {
+        // Si el token rechazado ya no es el vigente (p. ej. se inició sesión mientras la petición viajaba),
+        // se reintenta con el actual en vez de borrar la sesión nueva.
+        val tokenEnviado = response.request.header("Authorization")?.removePrefix("Bearer ")
+        val tokenActual = tokenManager.accessToken
+        if (tokenActual != null && tokenEnviado != tokenActual) {
+            if (response.request.header("X-Retry") != null) return null
+            return response.request.newBuilder()
+                .header("Authorization", "Bearer $tokenActual")
+                .header("X-Retry", "true")
+                .build()
+        }
+
         // Evitar loop infinito
         if (response.request.header("X-Retry") != null) {
-            tokenManager.clearSession()
+            expirarSesion()
             return null
         }
 
-        val refreshToken = tokenManager.refreshToken ?: run {
-            tokenManager.clearSession()
-            return null
-        }
+        val refreshToken = tokenManager.refreshToken ?: return null
 
         val json = """{"refresh":"$refreshToken"}"""
         val body = json.toRequestBody("application/json".toMediaType())
@@ -41,24 +50,24 @@ class TokenAuthenticator(
         val refreshResponse = try {
             client.newCall(refreshRequest).execute()
         } catch (_: Exception) {
-            tokenManager.clearSession()
+            expirarSesion()
             return null
         }
 
         if (!refreshResponse.isSuccessful) {
-            tokenManager.clearSession()
+            expirarSesion()
             return null
         }
 
         val responseBody = refreshResponse.body?.string() ?: run {
-            tokenManager.clearSession()
+            expirarSesion()
             return null
         }
 
         val tokens = try {
             Gson().fromJson(responseBody, TokenRefreshResponse::class.java)
         } catch (_: Exception) {
-            tokenManager.clearSession()
+            expirarSesion()
             return null
         }
 
@@ -71,5 +80,12 @@ class TokenAuthenticator(
             .header("Authorization", "Bearer ${tokens.access}")
             .header("X-Retry", "true")
             .build()
+    }
+
+    @Synchronized
+    private fun expirarSesion() {
+        tokenManager.clearSession()
+        com.altosdecarpay.app.data.SessionState.clear()
+        com.altosdecarpay.app.data.SessionState.sesionExpirada.value = true
     }
 }

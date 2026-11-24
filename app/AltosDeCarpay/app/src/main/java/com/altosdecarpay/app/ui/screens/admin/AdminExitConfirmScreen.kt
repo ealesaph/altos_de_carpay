@@ -26,15 +26,16 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun AdminExitConfirmScreen(
-    reservaId: String = "RES-0001",
+    reservaId: String,
     reservasViewModel: ReservasViewModel = viewModel(),
     onBackClick: () -> Unit = {},
     onConfirmExit: (String) -> Unit = {},
     onTabSelected: (AdminTab) -> Unit = {}
 ) {
-    val numericId = remember(reservaId) { QrCodeGenerator.parseReservaId(reservaId) ?: 1 }
+    val numericId = remember(reservaId) { QrCodeGenerator.parseReservaId(reservaId) ?: 0 }
     val detalleState by reservasViewModel.reservaDetalle.collectAsState()
     var isSaving by remember { mutableStateOf(false) }
+    var errorSalida by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(numericId) {
         reservasViewModel.loadReservaDetalle(numericId)
@@ -84,7 +85,7 @@ fun AdminExitConfirmScreen(
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
-                            text = "Reserva validada en base de datos",
+                            text = "Reserva encontrada",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = CarpayTextPrimary
@@ -179,14 +180,21 @@ fun AdminExitConfirmScreen(
                             )
                             Column(horizontalAlignment = Alignment.End) {
                                 Text("Cierre agendado", fontSize = 11.sp, color = CarpayWhite.copy(alpha = 0.75f))
-                                Text(reserva.horaFin?.take(5) ?: "--:--", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = CarpayWhite)
+                                Text(reserva.horaFin?.let { com.altosdecarpay.app.ui.utils.Formato.hora(it) } ?: "--:--", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = CarpayWhite)
                             }
                         }
                     }
                 }
 
+                if (errorSalida != null) {
+                    Surface(shape = RoundedCornerShape(12.dp), color = CarpayRedBg, modifier = Modifier.fillMaxWidth()) {
+                        Text(errorSalida!!, color = CarpayRedText, fontSize = 13.sp, modifier = Modifier.padding(12.dp))
+                    }
+                }
+
                 Button(
                     onClick = {
+                        errorSalida = null
                         isSaving = true
                         reservasViewModel.validarAcceso(
                             id = reserva.idReserva,
@@ -195,8 +203,9 @@ fun AdminExitConfirmScreen(
                                 isSaving = false
                                 onConfirmExit(reserva.idFormateado)
                             },
-                            onError = {
+                            onError = { msg ->
                                 isSaving = false
+                                errorSalida = msg   // antes el error se descartaba sin avisar
                             }
                         )
                     },

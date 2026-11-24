@@ -203,13 +203,10 @@ fun LoginScreen(
                             errorMessage = validationError
                             return@Button
                         }
-                        val rolSimulado = LoginHelper.determineRole(identificador)
-                        if (authViewModel != null) {
-                            try {
-                                authViewModel.login(identificador.trim(), password)
-                            } catch (_: Exception) {}
-                        }
-                        onLoginSuccess(rolSimulado)
+                        errorMessage = null
+                        // La navegación ocurre solo cuando el servidor confirma el inicio de sesión
+                        // (LaunchedEffect de loginState); antes se entraba de inmediato con un rol supuesto.
+                        authViewModel?.login(identificador.trim(), password)
                     },
                     enabled = !isLoading,
                     shape = RoundedCornerShape(12.dp),
@@ -269,6 +266,10 @@ fun LoginScreen(
                         modifier = Modifier.clickable { onNavigateToRegister() }
                     )
                 }
+
+                com.altosdecarpay.app.ui.components.EnlaceServidor(
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
             }
 
             // --- 3. FOOTER ---

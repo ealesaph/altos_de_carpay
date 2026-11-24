@@ -8,11 +8,4 @@ object LoginHelper {
         return null
     }
 
-    fun determineRole(identificador: String): String {
-        return if (identificador.contains("admin", ignoreCase = true)) {
-            "Admin"
-        } else {
-            "Operador"
-        }
-    }
 }

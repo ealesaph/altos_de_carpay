@@ -25,8 +25,9 @@ export default function SelectDateSpace() {
   const [serviciosSeleccionados, setServiciosSeleccionados] = useState(() =>
     Object.fromEntries((reservaEditada?.servicios || []).map((s) => [s.id_servicio, s.cantidad])),
   );
-  const [sectorSeleccionado, setSectorSeleccionado] = useState(
-    reservaEditada?.sectores?.[0] ? String(reservaEditada.sectores[0].id_sector) : '',
+  // Se pueden reservar varios espacios a la vez: misma fecha, hora de inicio y cantidad de horas.
+  const [sectoresSeleccionados, setSectoresSeleccionados] = useState(
+    () => (reservaEditada?.sectores || []).map((s) => String(s.id_sector)),
   );
   const [fecha, setFecha] = useState(reservaEditada?.fecha || fechaMinima());
   const [horaInicio, setHoraInicio] = useState(String(reservaEditada?.hora_inicio || '13:00').slice(0, 5));
@@ -42,18 +43,22 @@ export default function SelectDateSpace() {
         const disponibles = catalogo.filter((sector) => sector.estado === 'Disponible');
         setSectores(disponibles);
         setServicios((listaServicios || []).filter((s) => s.estado === 'Activo'));
-        if (disponibles.length) {
-          setSectorSeleccionado((actual) => actual || String(disponibles[0].id_sector));
-        }
+        // Si un espacio de la reserva editada ya no está disponible, se quita de la selección.
+        const ids = new Set(disponibles.map((s) => String(s.id_sector)));
+        setSectoresSeleccionados((actual) => actual.filter((id) => ids.has(id)));
       })
       .catch((requestError) => setError(requestError.message))
       .finally(() => setCargando(false));
   }, []);
 
-  const sectorActual = sectores.find(
-    (sector) => String(sector.id_sector) === sectorSeleccionado,
-  );
-  const precioArriendo = sectorActual ? Number(sectorActual.valor_hora) * Number(horas) : 0;
+  const elegidos = sectores.filter((sector) => sectoresSeleccionados.includes(String(sector.id_sector)));
+  const precioArriendo = elegidos.reduce((t, sector) => t + Number(sector.valor_hora) * Number(horas), 0);
+  const nombresElegidos = elegidos.map((sector) => sector.nombre).join(', ');
+
+  const toggleSector = (idSector) => {
+    const id = String(idSector);
+    setSectoresSeleccionados((actual) => (actual.includes(id) ? actual.filter((x) => x !== id) : [...actual, id]));
+  };
   const precioExtras = servicios.reduce((acc, srv) => {
     const cant = Number(serviciosSeleccionados[srv.id_servicio] || 0);
     return acc + (cant > 0 ? Number(srv.valor) * cant : 0);
@@ -80,8 +85,8 @@ export default function SelectDateSpace() {
       navigate('/login', { state: { next: '/reservar/espacio' } });
       return;
     }
-    if (!sectorActual) {
-      setError('Selecciona un espacio disponible.');
+    if (!elegidos.length) {
+      setError('Selecciona al menos un espacio.');
       return;
     }
     const horasNumero = Number(horas);
@@ -103,7 +108,7 @@ export default function SelectDateSpace() {
       const datos = {
         fecha,
         hora_inicio: horaInicio,
-        sectores: [{ sector: sectorActual.id_sector, horas: Number(horas) }],
+        sectores: elegidos.map((sector) => ({ sector: sector.id_sector, horas: Number(horas) })),
         servicios: serviciosPayload,
         acepta_condiciones: aceptaCondiciones,
       };
@@ -114,12 +119,12 @@ export default function SelectDateSpace() {
         state: {
           ...reserva,
           id_reserva: reserva.id_reserva,
-          nombreEspacio: sectorActual.nombre,
+          nombreEspacio: nombresElegidos,
           precioTotal: Number(reserva.monto_total),
           precioArriendo,
           precioExtras,
           anticipo: Number(reserva.monto_anticipo),
-          img: sectorActual.fotografias?.[0] || defaultSpaceImg,
+          img: elegidos[0]?.fotografias?.[0] || defaultSpaceImg,
           bloque: `${reserva.hora_inicio} · ${reserva.horas_reservadas} horas`,
           tipoPago: 'Anticipo',
         },
@@ -146,7 +151,7 @@ export default function SelectDateSpace() {
             Paso 1 · Reserva
           </span>
           <h1 className="font-serif text-3xl md:text-4xl text-forest-900 mt-1">
-            {reservaEditada ? `Editar reserva N° ${reservaEditada.id_reserva}` : 'Selecciona tu espacio y fecha'}
+            {reservaEditada ? `Editar reserva N° ${reservaEditada.id_reserva}` : 'Selecciona tus espacios y fecha'}
           </h1>
           <p className="text-sm text-gray-500 mt-2">
             Horario de arriendo: {textoBloques()}. Se reserva por horas completas.
@@ -156,7 +161,10 @@ export default function SelectDateSpace() {
         <form onSubmit={handleContinuar} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <section className="lg:col-span-2 bg-white p-6 md:p-8 rounded-3xl border border-sand-200 shadow-sm space-y-6">
             <div>
-              <h2 className="font-serif text-xl font-semibold text-forest-900 mb-4">Espacio disponible</h2>
+              <h2 className="font-serif text-xl font-semibold text-forest-900 mb-1">Espacios disponibles</h2>
+              <p className="text-xs text-gray-500 mb-4">
+                Puedes elegir uno o varios; todos se reservan para la misma fecha y horario.
+              </p>
               {cargando && <p className="text-sm text-gray-500">Cargando catálogo…</p>}
               {!cargando && sectores.length === 0 && !error && (
                 <p className="text-sm text-gray-500">No hay espacios disponibles para reservar.</p>
@@ -166,17 +174,17 @@ export default function SelectDateSpace() {
                   <label
                     key={sector.id_sector}
                     className={`flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer ${
-                      sectorSeleccionado === String(sector.id_sector)
+                      sectoresSeleccionados.includes(String(sector.id_sector))
                         ? 'border-forest-800 bg-forest-50/40'
                         : 'border-sand-200'
                     }`}
                   >
                     <input
-                      type="radio"
-                      name="sector"
+                      type="checkbox"
+                      name="sectores"
                       value={sector.id_sector}
-                      checked={sectorSeleccionado === String(sector.id_sector)}
-                      onChange={() => setSectorSeleccionado(String(sector.id_sector))}
+                      checked={sectoresSeleccionados.includes(String(sector.id_sector))}
+                      onChange={() => toggleSector(sector.id_sector)}
                       className="mt-1"
                     />
                     <span className="flex-1">
@@ -294,7 +302,24 @@ export default function SelectDateSpace() {
 
           <aside className="bg-white p-6 rounded-3xl border border-sand-200 shadow-sm h-fit space-y-4">
             <h2 className="font-serif text-xl font-semibold text-forest-900">Resumen</h2>
-            <p className="text-sm text-gray-600">{sectorActual?.nombre || 'Selecciona un espacio'}</p>
+            {elegidos.length ? (
+              <ul className="text-sm text-gray-600 space-y-1">
+                {elegidos.map((sector) => (
+                  <li key={sector.id_sector} className="flex justify-between gap-2">
+                    <span>{sector.nombre}</span>
+                    <span className="whitespace-nowrap">${(Number(sector.valor_hora) * Number(horas)).toLocaleString('es-CL')}</span>
+                  </li>
+                ))}
+                {precioExtras > 0 && (
+                  <li className="flex justify-between gap-2">
+                    <span>Servicios adicionales</span>
+                    <span className="whitespace-nowrap">${precioExtras.toLocaleString('es-CL')}</span>
+                  </li>
+                )}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-600">Selecciona al menos un espacio</p>
+            )}
             <p className="text-sm text-gray-600">{fecha} · {horaInicio}–{horaTermino(horaInicio, horas)} · {horas} {Number(horas) === 1 ? 'hora' : 'horas'}</p>
             <div className="border-t border-sand-100 pt-4 flex justify-between font-semibold text-forest-900">
               <span>Total estimado</span>
@@ -305,7 +330,7 @@ export default function SelectDateSpace() {
             </p>
             <button
               type="submit"
-              disabled={cargando || enviando || !sectorActual}
+              disabled={cargando || enviando || !elegidos.length}
               className="w-full bg-forest-800 text-white py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {enviando ? 'Guardando reserva…' : reservaEditada ? 'Guardar cambios' : 'Continuar a revisión'}

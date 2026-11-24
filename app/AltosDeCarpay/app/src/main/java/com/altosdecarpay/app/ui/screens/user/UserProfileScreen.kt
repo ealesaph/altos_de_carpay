@@ -2,6 +2,7 @@ package com.altosdecarpay.app.ui.screens.user
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +26,7 @@ import com.altosdecarpay.app.ui.viewmodel.AuthViewModel
 fun UserProfileScreen(
     authViewModel: AuthViewModel? = viewModel(),
     onLogout: () -> Unit = {},
+    onSesionTerminada: (String) -> Unit = {},
     onTabSelected: (UserTab) -> Unit = {}
 ) {
     val perfilState by authViewModel?.perfil?.collectAsState() ?: remember { mutableStateOf(null) }
@@ -33,12 +35,10 @@ fun UserProfileScreen(
         authViewModel?.loadPerfil()
     }
 
-    val user = (perfilState as? NetworkResult.Success)?.data ?: SessionState.currentUser
-    val nombre = user?.nombreCompleto?.ifBlank { "Usuario Carpay" } ?: "Camila Rojas"
-    val correo = user?.correo?.ifBlank { "usuario@correo.cl" } ?: "camila.rojas@correo.cl"
-    val telefono = user?.telefono?.ifBlank { "Sin teléfono registrado" } ?: "+56 9 8765 4321"
-    val rut = user?.rut ?: ""
-    val iniciales = user?.iniciales ?: "CR"
+    // Sin datos de ejemplo: mientras carga se muestra «Cargando tus datos…».
+    var perfil by remember(perfilState) {
+        mutableStateOf((perfilState as? NetworkResult.Success)?.data ?: SessionState.currentUser)
+    }
 
     Scaffold(
         topBar = { UserTopBar() },
@@ -49,6 +49,7 @@ fun UserProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .verticalScroll(androidx.compose.foundation.rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -57,38 +58,16 @@ fun UserProfileScreen(
                 subtitle = "Datos de tu cuenta en Altos de Carpay."
             )
 
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = CarpayWhite,
-                border = BorderStroke(1.dp, CarpayInputBorder),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(54.dp)
-                            .clip(CircleShape)
-                            .background(CarpayGreenLight)
-                    ) {
-                        Text(iniciales, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = CarpayPrimaryGreen)
-                    }
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column {
-                        Text(nombre, fontWeight = FontWeight.Bold, fontSize = 17.sp, color = CarpayTextPrimary)
-                        Text(correo, fontSize = 13.sp, color = CarpayTextSecondary)
-                        Text(telefono, fontSize = 12.sp, color = CarpayTextSecondary)
-                        if (rut.isNotBlank()) {
-                            Text("RUT: $rut", fontSize = 11.sp, color = CarpayTextSecondary)
-                        }
-                    }
-                }
-            }
+            com.altosdecarpay.app.ui.components.TarjetaPerfil(perfil = perfil, rolVisible = "Cliente")
 
-            Spacer(modifier = Modifier.weight(1f))
+            com.altosdecarpay.app.ui.components.OpcionesCuenta(
+                perfil = perfil,
+                esCliente = true,
+                onPerfilActualizado = { perfil = it },
+                onSesionTerminada = { mensaje -> authViewModel?.logout { onSesionTerminada(mensaje) } ?: onSesionTerminada(mensaje) }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedButton(
                 onClick = {

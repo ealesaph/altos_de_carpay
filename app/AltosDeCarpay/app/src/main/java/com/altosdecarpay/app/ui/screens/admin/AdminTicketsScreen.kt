@@ -29,6 +29,9 @@ fun AdminTicketsScreen(
     var filterSelected by remember { mutableStateOf("Todos") }
     var selectedConsultaId by remember { mutableStateOf<Int?>(null) }
     var respuestaBorrador by remember { mutableStateOf("") }
+    var confirmarEnvio by remember { mutableStateOf(false) }
+    var enviando by remember { mutableStateOf(false) }
+    var aviso by remember { mutableStateOf<String?>(null) }
 
     val consultasState by consultasViewModel.consultas.collectAsState()
 
@@ -45,8 +48,10 @@ fun AdminTicketsScreen(
         }
     }
 
-    val activeConsulta = remember(filteredConsultas, selectedConsultaId) {
-        filteredConsultas.firstOrNull { it.idConsulta == selectedConsultaId } ?: filteredConsultas.firstOrNull()
+    // La conversación se abre en su propia ventana al tocar una consulta
+    // (antes aparecía al final de la lista, fuera de la vista).
+    val activeConsulta = remember(allConsultas, selectedConsultaId) {
+        allConsultas.firstOrNull { it.idConsulta == selectedConsultaId }
     }
 
     Scaffold(
@@ -89,7 +94,16 @@ fun AdminTicketsScreen(
                 }
             }
 
-            if (consultasState is NetworkResult.Loading) {
+            if (aviso != null) {
+                Surface(shape = RoundedCornerShape(12.dp), color = CarpayGreenLight, modifier = Modifier.fillMaxWidth()) {
+                    Text(aviso!!, fontSize = 13.sp, color = CarpayPrimaryGreen, modifier = Modifier.padding(12.dp))
+                }
+            }
+
+            val estadoCarga = consultasState
+            if (estadoCarga is NetworkResult.Error) {
+                com.altosdecarpay.app.ui.components.MensajeError(estadoCarga.message) { consultasViewModel.loadConsultas() }
+            } else if (consultasState is NetworkResult.Loading) {
                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = CarpayPrimaryGreen)
                 }
@@ -119,7 +133,7 @@ fun AdminTicketsScreen(
                         border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, if (isSelected) CarpayPrimaryGreen else CarpayInputBorder),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { selectedConsultaId = item.idConsulta }
+                            .clickable { selectedConsultaId = item.idConsulta; respuestaBorrador = ""; aviso = null }
                     ) {
                         Row(
                             modifier = Modifier.padding(14.dp),
@@ -133,39 +147,47 @@ fun AdminTicketsScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = CarpayPrimaryGreen
                                 )
-                                Text(item.asunto, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
-                                Text(item.fechaEnvio.take(10), fontSize = 11.sp, color = CarpayTextSecondary)
+                                Text(item.asunto, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary,
+                                    maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                Text(com.altosdecarpay.app.ui.utils.Formato.fechaHora(item.fechaEnvio), fontSize = 11.sp, color = CarpayTextSecondary)
                             }
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (item.estado == "Respondida") CarpayGreenLight else CarpayAmberBg
-                            ) {
-                                Text(
-                                    text = item.estado,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (item.estado == "Respondida") CarpayPrimaryGreen else CarpayAmberText,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
-                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            com.altosdecarpay.app.ui.components.EstadoChip(item.estado, etiqueta = com.altosdecarpay.app.ui.utils.Formato.estadoConsulta(item.estado))
                         }
                     }
                 }
 
-                if (activeConsulta != null) {
-                    HorizontalDivider(color = CarpayInputBorder)
+                if (activeConsulta != null) androidx.compose.ui.window.Dialog(
+                    onDismissRequest = { selectedConsultaId = null },
+                    properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+                ) {
+                  Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = CarpayBackground,
+                    modifier = Modifier.fillMaxWidth(0.94f).heightIn(max = 640.dp)
+                  ) {
+                  Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()).padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                  ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "${activeConsulta.idFormateado} · ${activeConsulta.asunto}",
+                            fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { selectedConsultaId = null }) { Icon(Icons.Outlined.Close, "Cerrar") }
+                    }
+                    if (!activeConsulta.correoRespuesta.isNullOrBlank()) {
+                        Text("La respuesta se enviará a ${activeConsulta.correoRespuesta}" +
+                            (if (activeConsulta.cliente == null) " (consulta sin cuenta)" else ""), fontSize = 12.sp, color = CarpayTextSecondary)
+                    }
 
-                    Text(
-                        text = "Conversación · ${activeConsulta.idFormateado}",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = CarpayTextPrimary
-                    )
 
                     ChatBubble(
                         author = activeConsulta.clienteNombre ?: "Cliente",
                         message = activeConsulta.mensaje,
-                        time = activeConsulta.fechaEnvio.take(16).replace("T", " "),
+                        time = com.altosdecarpay.app.ui.utils.Formato.fechaHora(activeConsulta.fechaEnvio),
                         isAdmin = false
                     )
 
@@ -173,7 +195,7 @@ fun AdminTicketsScreen(
                         ChatBubble(
                             author = "Equipo Altos de carpay",
                             message = activeConsulta.respuesta,
-                            time = activeConsulta.fechaRespuesta?.take(16)?.replace("T", " ") ?: "Respondida",
+                            time = activeConsulta.fechaRespuesta?.let { com.altosdecarpay.app.ui.utils.Formato.fechaHora(it) } ?: "Respondida",
                             isAdmin = true
                         )
                     } else {
@@ -200,14 +222,29 @@ fun AdminTicketsScreen(
                             }
                         }
 
-                        Button(
-                            onClick = {
-                                if (respuestaBorrador.isNotBlank()) {
-                                    consultasViewModel.responderConsulta(activeConsulta.idConsulta, respuestaBorrador)
-                                    respuestaBorrador = ""
+                        if (confirmarEnvio) {
+                            com.altosdecarpay.app.ui.components.DialogoConfirmacion(
+                                titulo = "¿Enviar esta respuesta?",
+                                mensaje = "Se enviará por correo a ${activeConsulta.correoRespuesta ?: "la persona"} y la consulta quedará cerrada. No se puede editar después.",
+                                textoConfirmar = "Enviar respuesta",
+                                onCancelar = { confirmarEnvio = false },
+                                onConfirmar = {
+                                    confirmarEnvio = false
+                                    enviando = true
+                                    consultasViewModel.responderConsulta(activeConsulta.idConsulta, respuestaBorrador.trim()) { error ->
+                                        enviando = false
+                                        if (error == null) {
+                                            aviso = "${activeConsulta.idFormateado} respondida."
+                                            respuestaBorrador = ""
+                                            selectedConsultaId = null
+                                        } else aviso = error
+                                    }
                                 }
-                            },
-                            enabled = respuestaBorrador.isNotBlank(),
+                            )
+                        }
+                        Button(
+                            onClick = { confirmarEnvio = true },
+                            enabled = respuestaBorrador.isNotBlank() && !enviando,
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = CarpayPrimaryGreen, contentColor = CarpayWhite),
                             modifier = Modifier.fillMaxWidth().height(48.dp)
@@ -217,6 +254,8 @@ fun AdminTicketsScreen(
                             Text("Enviar respuesta", fontWeight = FontWeight.SemiBold)
                         }
                     }
+                  }
+                  }
                 }
             }
         }

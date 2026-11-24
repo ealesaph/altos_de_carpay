@@ -21,14 +21,18 @@ import com.altosdecarpay.app.ui.viewmodel.ServiciosViewModel
 
 @Composable
 fun UserExtraServicesScreen(
-    reservaId: String = "RES-0001",
+    reservaId: String,
     serviciosViewModel: ServiciosViewModel = viewModel(),
+    consultasViewModel: com.altosdecarpay.app.ui.viewmodel.ConsultasViewModel = viewModel(),
     onBackClick: () -> Unit = {},
     onRequestSubmitted: () -> Unit = {},
     onTabSelected: (UserTab) -> Unit = {}
 ) {
     val serviciosState by serviciosViewModel.servicios.collectAsState()
     val cantidades = remember { mutableStateMapOf<Int, Int>() }
+    var enviando by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var confirmar by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         serviciosViewModel.loadServicios()
@@ -57,12 +61,15 @@ fun UserExtraServicesScreen(
         ) {
             UserScreenHeader(
                 title = "Servicios extra",
-                subtitle = "Catálogo disponible para tu reserva $reservaId.",
+                subtitle = "Elige lo que necesitas para tu reserva $reservaId. El equipo confirmará disponibilidad y el cobro.",
                 showBackButton = true,
                 onBackClick = onBackClick
             )
 
-            if (serviciosState is NetworkResult.Loading) {
+            val estadoCarga = serviciosState
+            if (estadoCarga is NetworkResult.Error) {
+                com.altosdecarpay.app.ui.components.MensajeError(estadoCarga.message) { serviciosViewModel.loadServicios() }
+            } else if (serviciosState is NetworkResult.Loading) {
                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = CarpayPrimaryGreen)
                 }
@@ -97,7 +104,7 @@ fun UserExtraServicesScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(prod.nombre, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
                                 Text(
-                                    "${prod.descripcion.ifBlank { "Servicio" }} · $${prod.valor}",
+                                    "${prod.descripcion.ifBlank { "Servicio" }} · ${com.altosdecarpay.app.ui.utils.Formato.clp(prod.valor)}",
                                     fontSize = 12.sp,
                                     color = CarpayTextSecondary
                                 )
@@ -133,13 +140,40 @@ fun UserExtraServicesScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Total seleccionado", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
-                        Text("$$totalEstimado", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = CarpayPrimaryGreen)
+                        Text(com.altosdecarpay.app.ui.utils.Formato.clp(totalEstimado.toString()), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = CarpayPrimaryGreen)
                     }
                 }
 
+                if (error != null) Text(error!!, fontSize = 13.sp, color = CarpayRedText)
+
+                // Antes el botón solo mostraba «enviada» sin llamar al servidor. Ahora la solicitud llega
+                // al equipo como consulta asociada a la reserva (se ve en Tickets de la app y en el panel web).
+                if (confirmar) {
+                    val detalle = servicios.filter { (cantidades[it.idServicio] ?: 0) > 0 }
+                        .joinToString("\n") { "• ${cantidades[it.idServicio]} × ${it.nombre} (${com.altosdecarpay.app.ui.utils.Formato.clp(it.valor)} c/u)" }
+                    com.altosdecarpay.app.ui.components.DialogoConfirmacion(
+                        titulo = "¿Enviar la solicitud?",
+                        mensaje = "$detalle\n\nTotal estimado: ${com.altosdecarpay.app.ui.utils.Formato.clp(totalEstimado.toString())}. El equipo te responderá con la confirmación y el cobro.",
+                        textoConfirmar = "Enviar solicitud",
+                        onCancelar = { confirmar = false },
+                        onConfirmar = {
+                            confirmar = false
+                            enviando = true
+                            error = null
+                            consultasViewModel.crearConsulta(
+                                "$reservaId: solicitud de servicios extra",
+                                "$detalle\nTotal estimado: ${com.altosdecarpay.app.ui.utils.Formato.clp(totalEstimado.toString())}"
+                            ) { ok ->
+                                enviando = false
+                                if (ok) onRequestSubmitted() else error = "No se pudo enviar la solicitud. Inténtalo nuevamente."
+                            }
+                        }
+                    )
+                }
+
                 Button(
-                    onClick = onRequestSubmitted,
-                    enabled = totalEstimado > 0,
+                    onClick = { confirmar = true },
+                    enabled = totalEstimado > 0 && !enviando,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = CarpayPrimaryGreen, contentColor = CarpayWhite),
                     modifier = Modifier

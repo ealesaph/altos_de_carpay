@@ -7,7 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,8 +27,13 @@ enum class UserTab(val label: String, val icon: ImageVector) {
 
 @Composable
 fun UserTopBar(
-    onNotificationsClick: () -> Unit = {}
+    onNotificationsClick: (() -> Unit)? = null
 ) {
+    // La campana abre el panel de avisos (antes no hacía nada).
+    var verNotificaciones by remember { mutableStateOf(false) }
+    if (verNotificaciones) {
+        com.altosdecarpay.app.ui.components.NotificacionesDialog(esAdmin = false, onCerrar = { verNotificaciones = false })
+    }
     Surface(
         color = CarpayBackground,
         modifier = Modifier.fillMaxWidth()
@@ -67,7 +72,7 @@ fun UserTopBar(
             }
 
             IconButton(
-                onClick = onNotificationsClick,
+                onClick = { onNotificationsClick?.invoke() ?: run { verNotificaciones = true } },
                 modifier = Modifier
                     .size(38.dp)
                     .clip(CircleShape)

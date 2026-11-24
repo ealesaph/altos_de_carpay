@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { CreditCard, Check, ArrowRight } from 'lucide-react';
 import defaultSpaceImg from '../assets/default-space.svg';
 import Footer from '../components/Footer.jsx';
-import { desgloseReserva, formatoFechaHora } from '../reglas.js';
+import { desgloseReserva, formatoFechaHora, codigoReserva } from '../reglas.js';
 
 export default function PaymentCard() {
   const navigate = useNavigate();
@@ -265,7 +265,7 @@ export default function PaymentCard() {
           <div className="lg:col-span-5 bg-white p-6 md:p-8 rounded-3xl border border-sand-200/80 shadow-sm space-y-6">
             <div className="flex justify-between items-center text-xs text-gray-400 pb-2 border-b border-sand-100">
               <span>Altos de carpay</span>
-              <span className="font-mono">RES-{datosReserva.id_reserva}</span>
+              <span className="font-mono">{codigoReserva(datosReserva.id_reserva)}</span>
             </div>
 
             <div className="rounded-2xl overflow-hidden h-36 w-full bg-sand-100 border border-sand-200">

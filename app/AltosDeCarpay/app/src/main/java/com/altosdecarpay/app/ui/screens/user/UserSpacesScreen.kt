@@ -19,14 +19,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.altosdecarpay.app.data.remote.NetworkResult
+import com.altosdecarpay.app.ui.components.MensajeError
 import com.altosdecarpay.app.ui.theme.*
+import com.altosdecarpay.app.ui.utils.Formato
 import com.altosdecarpay.app.ui.viewmodel.ServiciosViewModel
 
 @Composable
 fun UserSpacesScreen(
-    reservaId: String = "RES-0001",
     serviciosViewModel: ServiciosViewModel = viewModel(),
     onBackClick: () -> Unit = {},
+    onReservar: () -> Unit = {},
     onTabSelected: (UserTab) -> Unit = {}
 ) {
     val sectoresState by serviciosViewModel.sectores.collectAsState()
@@ -52,9 +54,7 @@ fun UserSpacesScreen(
         ) {
             UserScreenHeader(
                 title = "Espacios del recinto",
-                subtitle = "Sectores disponibles en Altos de Carpay.",
-                showBackButton = true,
-                onBackClick = onBackClick
+                subtitle = "Sectores disponibles en Altos de Carpay."
             )
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -62,7 +62,10 @@ fun UserSpacesScreen(
                 Text("${sectores.size} espacios", fontSize = 12.sp, color = CarpayTextSecondary)
             }
 
-            if (sectoresState is NetworkResult.Loading) {
+            val estadoCarga = sectoresState
+            if (estadoCarga is NetworkResult.Error) {
+                MensajeError(estadoCarga.message) { serviciosViewModel.loadSectores() }
+            } else if (sectoresState is NetworkResult.Loading) {
                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = CarpayPrimaryGreen)
                 }
@@ -92,7 +95,7 @@ fun UserSpacesScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(sector.nombre, fontFamily = FontFamily.Serif, fontSize = 21.sp, color = CarpayTextPrimary)
-                                    Text("$${sector.valorHora}/h", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = CarpayPrimaryGreen)
+                                    Text("${Formato.clp(sector.valorHora)} / hora", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = CarpayPrimaryGreen)
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(sector.descripcion.ifBlank { "Sector del recinto" }, fontSize = 13.sp, color = CarpayTextSecondary)
@@ -102,7 +105,7 @@ fun UserSpacesScreen(
                                     color = if (sector.estado == "Disponible") CarpayGreenLight else CarpayAmberBg
                                 ) {
                                     Text(
-                                        sector.estado,
+                                        if (sector.estado == "Mantencion") "En mantención" else sector.estado,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = if (sector.estado == "Disponible") CarpayPrimaryGreen else CarpayAmberText,
@@ -113,6 +116,17 @@ fun UserSpacesScreen(
                         }
                     }
                 }
+            }
+
+            Button(
+                onClick = onReservar,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = CarpayPrimaryGreen, contentColor = CarpayWhite),
+                modifier = Modifier.fillMaxWidth().height(50.dp)
+            ) {
+                Icon(Icons.Outlined.EventAvailable, null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Reservar uno o varios espacios", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
             }
         }
     }

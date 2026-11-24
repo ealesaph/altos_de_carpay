@@ -92,6 +92,9 @@ export default function Login() {
           <p className="text-xs text-gray-500 mb-8 leading-relaxed">
             Inicia sesión para continuar con tu reserva o revisar tus próximos encuentros.
           </p>
+          {new URLSearchParams(location.search).get('sesion') === 'expirada' && (
+            <p className="text-sm text-amber-700 mb-4">Tu sesión expiró. Inicia sesión nuevamente.</p>
+          )}
           {location.state?.registroExitoso && (
             <p className="text-sm text-green-700 mb-4">Cuenta creada. Inicia sesión para continuar.</p>
           )}

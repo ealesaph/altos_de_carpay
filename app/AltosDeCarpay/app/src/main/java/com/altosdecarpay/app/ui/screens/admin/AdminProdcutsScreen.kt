@@ -52,7 +52,7 @@ fun AdminProductsScreen(
         ) {
             AdminScreenHeader(
                 title = "Servicios y productos",
-                subtitle = "Catálogo de servicios extra registrados en la base de datos",
+                subtitle = "Servicios extra que los clientes pueden agregar a su reserva",
                 showBackButton = true,
                 onBackClick = onBackClick
             )
@@ -74,7 +74,7 @@ fun AdminProductsScreen(
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(prod.nombre, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
                             Text(
-                                "${prod.descripcion.ifBlank { "Servicio extra" }} · $${prod.valor}",
+                                "${prod.descripcion.ifBlank { "Servicio extra" }} · ${com.altosdecarpay.app.ui.utils.Formato.clp(prod.valor)}",
                                 fontSize = 12.sp,
                                 color = CarpayTextSecondary
                             )
@@ -143,7 +143,7 @@ fun AdminProductsScreen(
                     ) {
                         Icon(Icons.Outlined.Check, null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Guardar en base de datos", fontWeight = FontWeight.SemiBold)
+                        Text("Guardar servicio", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

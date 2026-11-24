@@ -60,17 +60,41 @@ data class ReservaResponse(
     @SerializedName("monto_pagado") val montoPagado: String?,
     @SerializedName("saldo_pendiente") val saldoPendiente: String?,
     @SerializedName("plazo_anticipo_vence") val plazoAnticipoVence: String?,
+    @SerializedName("plazo_saldo_vence") val plazoSaldoVence: String? = null,
     @SerializedName("fecha_creacion") val fechaCreacion: String,
     @SerializedName("token_qr") val tokenQr: String?,
+    @SerializedName("cancelada_por") val canceladaPor: String? = null,
+    @SerializedName("monto_devolucion") val montoDevolucion: String? = null,
+    @SerializedName("devolucion_realizada_en") val devolucionRealizadaEn: String? = null,
     val sectores: List<SectorReservadoResponse>,
     val servicios: List<ServicioReservadoResponse>,
     val pagos: List<PagoResponse>
 ) {
     val idFormateado: String get() = "RES-%04d".format(idReserva)
 
+    /** Nombre corto de los espacios: «Mirador», «Mirador y Piscina» o «Mirador + 2 más». */
     val sectorPrincipal: String
-        get() = sectores.firstOrNull()?.nombre ?: "Sin sector"
+        get() = when (sectores.size) {
+            0 -> "Sin sector"
+            1 -> sectores[0].nombre
+            2 -> "${sectores[0].nombre} y ${sectores[1].nombre}"
+            else -> "${sectores[0].nombre} + ${sectores.size - 1} más"
+        }
+
+    val saldo: java.math.BigDecimal
+        get() = saldoPendiente?.toBigDecimalOrNull() ?: java.math.BigDecimal.ZERO
 }
+
+data class CancelacionRequest(
+    val origen: String? = null
+)
+
+data class SimulacionCancelacionResponse(
+    val origen: String,
+    @SerializedName("monto_pagado") val montoPagado: String,
+    @SerializedName("monto_devolucion") val montoDevolucion: String,
+    val regla: String
+)
 
 data class PaginatedResponse<T>(
     val count: Int,

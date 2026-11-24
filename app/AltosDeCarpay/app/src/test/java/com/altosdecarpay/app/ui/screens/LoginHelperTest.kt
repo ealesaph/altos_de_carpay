@@ -29,18 +29,4 @@ class LoginHelperTest {
         val result = LoginHelper.validateInputs("user@carpay.com", "123456")
         assertNull(result)
     }
-
-    @Test
-    fun determineRole_containingAdmin_returnsAdmin() {
-        assertEquals("Admin", LoginHelper.determineRole("admin"))
-        assertEquals("Admin", LoginHelper.determineRole("ADMIN@altosdecarpay.com"))
-        assertEquals("Admin", LoginHelper.determineRole("super_admin_user"))
-    }
-
-    @Test
-    fun determineRole_notContainingAdmin_returnsOperador() {
-        assertEquals("Operador", LoginHelper.determineRole("juan"))
-        assertEquals("Operador", LoginHelper.determineRole("user@altosdecarpay.com"))
-        assertEquals("Operador", LoginHelper.determineRole("operador123"))
-    }
 }

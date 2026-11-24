@@ -57,5 +57,5 @@ data class BitacoraIncidenciaResponse(
     @SerializedName("area_no_contratada") val areaNoContratada: Boolean = false,
     val alerta: String? = null
 ) {
-    val idFormateado: String get() = "INC-%04d".format(idIncidencia)
+    val idFormateado: String get() = "Incidencia N° $idIncidencia"
 }

@@ -101,7 +101,9 @@ interface ApiService {
         @Query("estado") estado: String? = null,
         @Query("desde") desde: String? = null,
         @Query("hasta") hasta: String? = null,
-        @Query("cliente") cliente: Int? = null
+        @Query("cliente") cliente: Int? = null,
+        @Query("vista") vista: String? = null,
+        @Query("page_size") pageSize: Int = 100
     ): Response<PaginatedResponse<ReservaResponse>>
 
     @GET("reservas/{id}/")
@@ -111,7 +113,19 @@ interface ApiService {
     suspend fun crearReserva(@Body request: ReservaCrearRequest): Response<ReservaResponse>
 
     @POST("reservas/{id}/cancelar/")
-    suspend fun cancelarReserva(@Path("id") id: Int): Response<ReservaResponse>
+    suspend fun cancelarReserva(
+        @Path("id") id: Int,
+        @Body request: CancelacionRequest = CancelacionRequest()
+    ): Response<ReservaResponse>
+
+    @GET("reservas/{id}/simular-cancelacion/")
+    suspend fun simularCancelacion(
+        @Path("id") id: Int,
+        @Query("origen") origen: String? = null
+    ): Response<SimulacionCancelacionResponse>
+
+    @POST("reservas/{id}/registrar-devolucion/")
+    suspend fun registrarDevolucion(@Path("id") id: Int): Response<ReservaResponse>
 
     @POST("reservas/{id}/estado/")
     suspend fun cambiarEstadoReserva(
@@ -132,7 +146,8 @@ interface ApiService {
 
     @GET("consultas/")
     suspend fun getConsultas(
-        @Query("estado") estado: String? = null
+        @Query("estado") estado: String? = null,
+        @Query("page_size") pageSize: Int = 100
     ): Response<PaginatedResponse<ConsultaResponse>>
 
     @GET("consultas/{id}/")

@@ -6,90 +6,61 @@ import org.junit.Test
 
 class ReservaFilterHelperTest {
 
+    private val hoy = "2026-11-23"
+
+    private fun item(id: String, fecha: String, hora: String, cliente: String, estado: String) = ReservaItemUi(
+        id = id, fecha = fecha, hora = hora, titulo = "Reserva Mirador", cliente = cliente,
+        espacio = "Mirador", estado = estado, detalleHorario = ""
+    )
+
     private val sampleReservas = listOf(
-        ReservaItemUi(
-            id = "RES-0248",
-            hora = "16:00",
-            titulo = "Cumpleaños de Camila",
-            cliente = "Camila Rojas",
-            espacio = "Quincho Los Aromos",
-            estado = "En curso",
-            detalleHorario = "Ingreso 16:08"
-        ),
-        ReservaItemUi(
-            id = "RES-0249",
-            hora = "18:00",
-            titulo = "Encuentro de equipo",
-            cliente = "Diego Muñoz",
-            espacio = "Salón del Roble",
-            estado = "En curso",
-            detalleHorario = "Ingreso 18:02"
-        ),
-        ReservaItemUi(
-            id = "RES-0250",
-            hora = "22:00",
-            titulo = "Cena de aniversario",
-            cliente = "Valentina Soto",
-            espacio = "Jardín del Maitén",
-            estado = "Confirmada",
-            detalleHorario = "Sin ingreso"
-        ),
-        ReservaItemUi(
-            id = "RES-0240",
-            hora = "12:00",
-            titulo = "Almuerzo corporativo",
-            cliente = "Roberto Gómez",
-            espacio = "Parrilla Central",
-            estado = "Finalizada",
-            detalleHorario = "Salida 15:30"
-        )
+        item("RES-0010", "2026-11-23", "13:00", "Camila Rojas", "En Proceso"),
+        item("RES-0011", "2026-12-20", "19:00", "Diego Muñoz", "Confirmado"),
+        item("RES-0012", "2026-12-01", "13:00", "Valentina Soto", "Pendiente"),
+        item("RES-0013", "2026-11-10", "13:00", "Roberto Gómez", "Finalizado"),
+        item("RES-0014", "2026-12-05", "13:00", "Ana Pérez", "Cancelado"),
+        item("RES-0015", "2026-11-20", "19:00", "Luis Díaz", "No se presentó")
     )
 
     @Test
-    fun filterReservas_filterTodas_returnsAll() {
-        val result = ReservaFilterHelper.filterReservas(sampleReservas, "Todas", "")
-        assertEquals(4, result.size)
+    fun todas_devuelveTodas() {
+        assertEquals(6, ReservaFilterHelper.filterReservas(sampleReservas, "Todas", "", hoy).size)
     }
 
     @Test
-    fun filterReservas_filterEnCurso_returnsOnlyEnCurso() {
-        val result = ReservaFilterHelper.filterReservas(sampleReservas, "En curso", "")
-        assertEquals(2, result.size)
-        assertTrue(result.all { it.estado == "En curso" })
+    fun proximas_soloVigentesDesdeHoyEnOrdenAscendente() {
+        val result = ReservaFilterHelper.filterReservas(sampleReservas, "Próximas", "", hoy)
+        assertEquals(listOf("RES-0010", "RES-0012", "RES-0011"), result.map { it.id })
     }
 
     @Test
-    fun filterReservas_filterConfirmadas_returnsOnlyConfirmadas() {
-        val result = ReservaFilterHelper.filterReservas(sampleReservas, "Confirmadas", "")
+    fun confirmadas_comparaConElEstadoDelServidor() {
+        val result = ReservaFilterHelper.filterReservas(sampleReservas, "Confirmadas", "", hoy)
+        assertEquals(listOf("RES-0011"), result.map { it.id })
+    }
+
+    @Test
+    fun enCurso_yNoSePresento() {
+        assertEquals(listOf("RES-0010"), ReservaFilterHelper.filterReservas(sampleReservas, "En curso", "", hoy).map { it.id })
+        assertEquals(listOf("RES-0015"), ReservaFilterHelper.filterReservas(sampleReservas, "No se presentó", "", hoy).map { it.id })
+    }
+
+    @Test
+    fun hoy_excluyeCanceladas() {
+        val result = ReservaFilterHelper.filterReservas(sampleReservas, "Hoy", "", hoy)
+        assertTrue(result.all { it.fecha == hoy && it.estado != "Cancelado" })
         assertEquals(1, result.size)
-        assertEquals("RES-0250", result.first().id)
     }
 
     @Test
-    fun filterReservas_filterFinalizadas_returnsOnlyFinalizadas() {
-        val result = ReservaFilterHelper.filterReservas(sampleReservas, "Finalizadas", "")
-        assertEquals(1, result.size)
-        assertEquals("RES-0240", result.first().id)
+    fun busquedaPorClienteYPorId() {
+        assertEquals("Camila Rojas", ReservaFilterHelper.filterReservas(sampleReservas, "Todas", "Camila", hoy).single().cliente)
+        assertEquals("RES-0011", ReservaFilterHelper.filterReservas(sampleReservas, "Todas", "0011", hoy).single().id)
     }
 
     @Test
-    fun filterReservas_searchByClient_returnsMatching() {
-        val result = ReservaFilterHelper.filterReservas(sampleReservas, "Todas", "Camila")
-        assertEquals(1, result.size)
-        assertEquals("Camila Rojas", result.first().cliente)
-    }
-
-    @Test
-    fun filterReservas_searchById_returnsMatching() {
-        val result = ReservaFilterHelper.filterReservas(sampleReservas, "Todas", "0249")
-        assertEquals(1, result.size)
-        assertEquals("RES-0249", result.first().id)
-    }
-
-    @Test
-    fun filterReservas_combinesFilterAndSearch() {
-        val result = ReservaFilterHelper.filterReservas(sampleReservas, "En curso", "Diego")
-        assertEquals(1, result.size)
-        assertEquals("RES-0249", result.first().id)
+    fun combinaFiltroYBusqueda() {
+        val result = ReservaFilterHelper.filterReservas(sampleReservas, "Pendientes", "Valentina", hoy)
+        assertEquals("RES-0012", result.single().id)
     }
 }

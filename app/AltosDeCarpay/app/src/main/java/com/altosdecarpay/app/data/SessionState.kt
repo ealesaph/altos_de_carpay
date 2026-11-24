@@ -8,6 +8,9 @@ import com.altosdecarpay.app.data.model.UsuarioInfo
  * para acceder rápidamente al perfil del usuario actual.
  */
 object SessionState {
+    /** Se activa cuando el servidor rechaza la sesión y no se pudo renovar: la app vuelve al inicio de sesión. */
+    val sesionExpirada = kotlinx.coroutines.flow.MutableStateFlow(false)
+
     var currentUser: PerfilResponse? = null
     var userInfo: UsuarioInfo? = null
 

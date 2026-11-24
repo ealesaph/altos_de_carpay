@@ -24,13 +24,14 @@ import com.altosdecarpay.app.ui.viewmodel.ServiciosViewModel
 
 @Composable
 fun AdminBitacoraScreen(
-    reservaId: String = "RES-0001",
+    reservaId: String? = null,   // null = bitácora general (todas las reservas, solo lectura)
     serviciosViewModel: ServiciosViewModel = viewModel(),
     reservasViewModel: ReservasViewModel = viewModel(),
     onBackClick: () -> Unit = {},
     onTabSelected: (AdminTab) -> Unit = {}
 ) {
-    val numericId = remember(reservaId) { QrCodeGenerator.parseReservaId(reservaId) ?: 1 }
+    val numericId = remember(reservaId) { reservaId?.let { QrCodeGenerator.parseReservaId(it) } }
+    val esGeneral = numericId == null
     val incidenciasState by serviciosViewModel.incidencias.collectAsState()
     val detalleState by reservasViewModel.reservaDetalle.collectAsState()
 
@@ -45,12 +46,14 @@ fun AdminBitacoraScreen(
 
     LaunchedEffect(numericId) {
         serviciosViewModel.loadIncidencias(numericId)
-        reservasViewModel.loadReservaDetalle(numericId)
+        if (numericId != null) reservasViewModel.loadReservaDetalle(numericId)
         serviciosViewModel.loadSectores()
     }
 
     val incidencias = (incidenciasState as? NetworkResult.Success)?.data ?: emptyList()
-    val reserva = (detalleState as? NetworkResult.Success)?.data
+    val reserva = if (esGeneral) null else (detalleState as? NetworkResult.Success)?.data?.takeIf { it.idReserva == numericId }
+    // Solo se puede registrar sobre una reserva que existe (antes se ofrecía el formulario para RES-0248, inexistente).
+    val puedeRegistrar = reserva != null && reserva.estado != "Finalizado"
     val esSoloLectura = reserva?.estado == "Finalizado"
     val sectores = (sectoresState as? NetworkResult.Success)?.data ?: emptyList()
     val contratados = reserva?.sectores?.map { it.idSector }?.toSet() ?: emptySet()
@@ -60,7 +63,7 @@ fun AdminBitacoraScreen(
             onDismissRequest = { alertaArea = null },
             icon = { Icon(Icons.Outlined.Warning, null, tint = CarpayRedText) },
             title = { Text("Área no contratada", fontWeight = FontWeight.Bold) },
-            text = { Text(alertaArea!!) },
+            text = { Text(alertaArea!!.removePrefix("Área no contratada: ")) },
             confirmButton = {
                 TextButton(onClick = { alertaArea = null }) { Text("Entendido") }
             }
@@ -82,7 +85,8 @@ fun AdminBitacoraScreen(
         ) {
             AdminScreenHeader(
                 title = "Bitácora de incidencias",
-                subtitle = "Observaciones e incumplimientos de la reserva $reservaId.",
+                subtitle = if (esGeneral) "Todas las incidencias registradas. Para agregar una, abre la reserva desde la agenda."
+                    else "Observaciones e incumplimientos de la reserva $reservaId.",
                 showBackButton = true,
                 onBackClick = onBackClick
             )
@@ -115,6 +119,11 @@ fun AdminBitacoraScreen(
                 }
             }
 
+            val errorReserva = detalleState as? NetworkResult.Error
+            if (!esGeneral && errorReserva != null) {
+                com.altosdecarpay.app.ui.components.MensajeError(errorReserva.message) { reservasViewModel.loadReservaDetalle(numericId!!) }
+            }
+
             Text("Historial · ${incidencias.size} registro(s)", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
 
             if (incidenciasState is NetworkResult.Loading) {
@@ -129,7 +138,7 @@ fun AdminBitacoraScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "No hay incidencias registradas para esta reserva.",
+                        text = if (esGeneral) "No hay incidencias registradas." else "No hay incidencias registradas para esta reserva.",
                         fontSize = 13.sp,
                         color = CarpayTextSecondary,
                         modifier = Modifier.padding(16.dp)
@@ -147,7 +156,8 @@ fun AdminBitacoraScreen(
                             Text("${inc.idFormateado} · ${inc.titulo}", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CarpayTextPrimary)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "${inc.fechaCreacion.take(19).replace("T", " ")} · ${inc.autorNombre ?: "Equipo Admin"}",
+                                text = "${com.altosdecarpay.app.ui.utils.Formato.fechaHora(inc.fechaCreacion)} · ${inc.autorNombre ?: "Equipo Admin"}" +
+                                    (if (esGeneral) " · " + "RES-%04d".format(inc.reserva) else ""),
                                 fontSize = 11.sp,
                                 color = CarpayTextSecondary
                             )
@@ -167,7 +177,7 @@ fun AdminBitacoraScreen(
                 }
             }
 
-            if (!esSoloLectura) {
+            if (puedeRegistrar) {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = CarpayWhite,
@@ -235,7 +245,7 @@ fun AdminBitacoraScreen(
                             onClick = {
                                 if (titulo.isNotBlank() && descripcion.isNotBlank()) {
                                     serviciosViewModel.crearIncidencia(
-                                        reservaId = numericId,
+                                        reservaId = numericId ?: return@Button,
                                         titulo = titulo,
                                         descripcion = descripcion,
                                         sectorId = sectorSeleccionado,

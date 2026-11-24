@@ -36,6 +36,11 @@ export function horaTermino(horaInicio, horas) {
   return `${dosDigitos(hora)}:00`;
 }
 
+/** Código visible de una reserva, igual en la web, la app y el QR (RES-0008). */
+export function codigoReserva(id) {
+  return `RES-${String(id ?? '').padStart(4, '0')}`;
+}
+
 export function formatoCLP(valor) {
   return `$${Math.round(Number(valor || 0)).toLocaleString('es-CL')}`;
 }

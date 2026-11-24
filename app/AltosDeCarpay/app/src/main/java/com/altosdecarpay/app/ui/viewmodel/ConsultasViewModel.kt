@@ -34,12 +34,12 @@ class ConsultasViewModel(application: Application) : AndroidViewModel(applicatio
                     _consultas.value = NetworkResult.Error("No se pudieron cargar las consultas")
                 }
             } catch (e: Exception) {
-                _consultas.value = NetworkResult.Error(e.message ?: "Error de conexión")
+                _consultas.value = NetworkResult.Error(com.altosdecarpay.app.ui.utils.Formato.mensajeConexion(e))
             }
         }
     }
 
-    fun crearConsulta(asunto: String, mensaje: String) {
+    fun crearConsulta(asunto: String, mensaje: String, onDone: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
             _crearResult.value = NetworkResult.Loading
             try {
@@ -47,23 +47,33 @@ class ConsultasViewModel(application: Application) : AndroidViewModel(applicatio
                 if (response.isSuccessful) {
                     _crearResult.value = NetworkResult.Success(response.body())
                     loadConsultas()
+                    onDone(true)
                 } else {
-                    _crearResult.value = NetworkResult.Error("No se pudo enviar la consulta")
+                    _crearResult.value = NetworkResult.Error(
+                        com.altosdecarpay.app.ui.utils.Formato.mensajeError(response.errorBody()?.string(), "No se pudo enviar la consulta.")
+                    )
+                    onDone(false)
                 }
             } catch (e: Exception) {
-                _crearResult.value = NetworkResult.Error(e.message ?: "Error de conexión")
+                _crearResult.value = NetworkResult.Error(com.altosdecarpay.app.ui.utils.Formato.mensajeConexion(e))
+                onDone(false)
             }
         }
     }
 
-    fun responderConsulta(id: Int, respuesta: String) {
+    fun responderConsulta(id: Int, respuesta: String, onDone: (String?) -> Unit = {}) {
         viewModelScope.launch {
             try {
                 val response = api.responderConsulta(id, RespuestaRequest(respuesta))
                 if (response.isSuccessful) {
                     loadConsultas()
+                    onDone(null)
+                } else {
+                    onDone(com.altosdecarpay.app.ui.utils.Formato.mensajeError(response.errorBody()?.string(), "No se pudo enviar la respuesta."))
                 }
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                onDone(com.altosdecarpay.app.ui.utils.Formato.mensajeConexion(e))
+            }
         }
     }
 

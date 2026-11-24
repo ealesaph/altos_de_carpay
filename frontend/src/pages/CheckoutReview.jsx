@@ -158,7 +158,7 @@ export default function CheckoutReview() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold block mb-1">
-                      Espacio seleccionado
+                      {(datosReserva.sectores?.length || 1) > 1 ? 'Espacios seleccionados' : 'Espacio seleccionado'}
                     </label>
                     <input 
                       type="text" 

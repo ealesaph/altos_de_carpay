@@ -125,6 +125,25 @@ Pruebas automáticas en `reservasApp/tests_observaciones.py`, ejecutadas en el c
 | 31 | A2 | Recargar `http://localhost/panel` | Abre el panel de la web | Aprobado |
 | 32 | Obs. 3 / B9 | Portada en 375 px | Botón de menú con todas las secciones | Aprobado |
 
+### 3.2 Pruebas y correcciones de la app Android (23-11-2026)
+
+Se recorrió la app en el emulador (Android 17) con los perfiles cliente y administrador. Se encontraron 23 problemas (APP-A1 a A6, M1 a M10 y B1 a B7) y en la segunda prueba aparecieron 3 más (APP-R1 a R3). Todos quedaron corregidos. El detalle de cada problema y su solución está en el documento «Pruebas exhaustivas de la app Android – Altos de Carpay», en el capítulo «Correcciones aplicadas». Resumen:
+
+- **Datos y sesión:** se eliminaron los datos de ejemplo del prototipo y las reservas fijas (`RES-0261`, `RES-0248`). El inicio de sesión espera la respuesta real del servidor. Si la sesión vence, la app vuelve al login con un aviso (`SessionState.sesionExpirada`).
+- **Acciones con confirmación:** el escáner primero busca la reserva y luego pide confirmar el ingreso o la salida. Lo mismo ocurre con el estado de los espacios, las respuestas a consultas y las acciones del detalle de reserva (estado, pago manual, cancelación con devolución simulada y registro de la devolución).
+- **Funciones completadas:** la solicitud de servicios extra se envía como consulta «RES-XXXX: …». Se agregaron notificaciones, el perfil con los derechos de la Ley N° 21.719, los filtros por estado del servidor y el estado «No se presentó».
+- **Formato:** se usa la función común `ui/utils/Formato.kt` para montos CLP, fechas en hora de Chile, RUT, teléfono, estados y mensajes de error sin JSON.
+- **Web:** si la sesión vence, la web vuelve a `/login?sesion=expirada` (`api.js`). La web usa el mismo código de reserva que la app y el QR (`codigoReserva`, por ejemplo `RES-0008`). No hubo cambios en el backend ni en la API.
+
+| # | Prueba | Resultado esperado | Estado |
+| :--- | :--- | :--- | :--- |
+| 33 | `gradlew :app:testDebugUnitTest` | 20 de 20 pruebas, incluida `FormatoTest` | Aprobado |
+| 34 | `python manage.py test` después de los cambios | 35 de 35 | Aprobado |
+| 35 | Consulta enviada desde el detalle de RES-0009 en la app | Aparece en el panel web como «RES-0009: …», pendiente | Aprobado |
+| 36 | Consulta sin cuenta creada en la web | Se ve en Tickets de la app con el correo de respuesta | Aprobado |
+| 37 | Ingreso por código manual fuera de plazo | Muestra la reserva, pide confirmar y luego muestra el mensaje del servidor sin JSON | Aprobado |
+| 38 | Sesión web con tokens inválidos | Redirige a `/login?sesion=expirada` | Aprobado |
+
 ## 4. Pendientes para Despliegue en Producción
 
 1. Configurar `DJANGO_DEBUG=False`, `DJANGO_ALLOWED_HOSTS` con el dominio productivo y certificado SSL/HTTPS en Nginx.
@@ -148,3 +167,7 @@ Pruebas automáticas en `reservasApp/tests_observaciones.py`, ejecutadas en el c
 3. **Cuentas iniciales creadas por `seed_data.py`:**
    * **Superusuario:** `admin@altosdecarpay.cl` / `CarpayAdmin2026!` (único habilitado para crear/gestionar personal administrador desde **Usuarios y personal**).
    * **Cliente de prueba:** `camila.rojas@gmail.com` / `ClientePass2026!`.
+4. **App Android en emulador y celular a la vez:**
+   * El emulador usa `10.0.2.2:8000` sin configurar nada.
+   * Un celular por USB usa `127.0.0.1:8000`. Con el celular conectado y la depuración USB activada, ejecutar `powershell -ep bypass -f .\app\AltosDeCarpay\conectar-celular.ps1`, que aplica `adb reverse` a los puertos 8000 (API) y 80 (web) e instala la app.
+   * Por Wi-Fi: en la pantalla de inicio de sesión, tocar «Servidor» y escribir la IP local del PC (por ejemplo `192.168.1.20`). Hay que permitir el puerto 8000 en el firewall de Windows.

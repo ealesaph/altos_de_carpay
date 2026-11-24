@@ -18,7 +18,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.altosdecarpay.app.data.SessionState
 import com.altosdecarpay.app.data.remote.NetworkResult
+import com.altosdecarpay.app.ui.components.EstadoChip
+import com.altosdecarpay.app.ui.components.MensajeError
 import com.altosdecarpay.app.ui.theme.*
+import com.altosdecarpay.app.ui.utils.Formato
 import com.altosdecarpay.app.ui.viewmodel.ConsultasViewModel
 
 @Composable
@@ -30,6 +33,8 @@ fun UserTicketsScreen(
 ) {
     var nuevoMensaje by remember { mutableStateOf("") }
     var nuevoAsunto by remember { mutableStateOf("Consulta general") }
+    var aviso by remember { mutableStateOf<String?>(null) }
+    var enviando by remember { mutableStateOf(false) }
     val consultasState by consultasViewModel.consultas.collectAsState()
 
     LaunchedEffect(Unit) {
@@ -54,12 +59,13 @@ fun UserTicketsScreen(
         ) {
             UserScreenHeader(
                 title = "Estamos para ayudarte",
-                subtitle = "Tus consultas y respuestas del equipo de Altos de Carpay",
-                showBackButton = true,
-                onBackClick = onBackClick
+                subtitle = "Tus consultas y respuestas del equipo de Altos de Carpay"
             )
 
-            if (consultasState is NetworkResult.Loading) {
+            val estadoCarga = consultasState
+            if (estadoCarga is NetworkResult.Error) {
+                MensajeError(estadoCarga.message) { consultasViewModel.loadConsultas() }
+            } else if (consultasState is NetworkResult.Loading) {
                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = CarpayPrimaryGreen)
                 }
@@ -79,26 +85,28 @@ fun UserTicketsScreen(
                 }
             } else {
                 consultas.forEach { consulta ->
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("${consulta.idFormateado} · ${consulta.asunto}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = CarpayTextPrimary)
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (consulta.estado == "Respondida") CarpayGreenLight else CarpayAmberBg
-                        ) {
-                            Text(
-                                consulta.estado,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (consulta.estado == "Respondida") CarpayPrimaryGreen else CarpayAmberText,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
-                        }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // El asunto ocupa el espacio libre y se corta en dos líneas; la etiqueta conserva su ancho.
+                        Text(
+                            "${consulta.idFormateado} · ${consulta.asunto}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = CarpayTextPrimary,
+                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        EstadoChip(consulta.estado, etiqueta = com.altosdecarpay.app.ui.utils.Formato.estadoConsulta(consulta.estado))
                     }
 
                     UserChatBubble(
                         author = nombreUsuario,
                         message = consulta.mensaje,
-                        time = consulta.fechaEnvio.take(16).replace("T", " "),
+                        time = Formato.fechaHora(consulta.fechaEnvio),
                         isUser = true
                     )
 
@@ -106,7 +114,7 @@ fun UserTicketsScreen(
                         UserChatBubble(
                             author = "Equipo Altos de carpay",
                             message = consulta.respuesta,
-                            time = consulta.fechaRespuesta?.take(16)?.replace("T", " ") ?: "Respondido",
+                            time = consulta.fechaRespuesta?.let { Formato.fechaHora(it) } ?: "Respondida",
                             isUser = false
                         )
                     }
@@ -141,11 +149,19 @@ fun UserTicketsScreen(
                     ) {
                         TextButton(
                             onClick = {
-                                if (nuevoMensaje.isNotBlank() && nuevoAsunto.isNotBlank()) {
-                                    consultasViewModel.crearConsulta(nuevoAsunto, nuevoMensaje)
-                                    nuevoMensaje = ""
+                                if (nuevoMensaje.isBlank() || nuevoAsunto.isBlank()) {
+                                    aviso = "Escribe el asunto y el mensaje antes de enviar."
+                                    return@TextButton
                                 }
-                            }
+                                enviando = true
+                                consultasViewModel.crearConsulta(nuevoAsunto.trim(), nuevoMensaje.trim()) { ok ->
+                                    enviando = false
+                                    aviso = if (ok) "Consulta enviada. Te avisaremos por correo cuando la respondamos." else
+                                        ((consultasViewModel.crearResult.value as? NetworkResult.Error)?.message ?: "No se pudo enviar la consulta.")
+                                    if (ok) nuevoMensaje = ""
+                                }
+                            },
+                            enabled = !enviando
                         ) {
                             Text("Enviar", fontWeight = FontWeight.Bold, color = CarpayPrimaryGreen)
                             Spacer(modifier = Modifier.width(4.dp))
@@ -155,18 +171,8 @@ fun UserTicketsScreen(
                 }
             }
 
-            OutlinedButton(
-                onClick = onNavigateToObservations,
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, CarpayInputBorder),
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = CarpayWhite, contentColor = CarpayPrimaryGreen),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-            ) {
-                Icon(Icons.Outlined.Add, null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Nueva consulta u observación previa", fontWeight = FontWeight.SemiBold)
+            if (aviso != null) {
+                Text(aviso!!, fontSize = 13.sp, color = CarpayPrimaryGreen)
             }
         }
     }
