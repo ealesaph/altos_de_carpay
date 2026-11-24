@@ -179,10 +179,23 @@ export async function getServices() {
   return Array.isArray(data) ? data : data.results;
 }
 
+export async function createSector(sector) {
+  return apiRequest('/sectores/', {
+    method: 'POST',
+    body: JSON.stringify(sector),
+  });
+}
+
 export async function updateSector(id, changes) {
   return apiRequest(`/sectores/${id}/`, {
     method: 'PATCH',
     body: JSON.stringify(changes),
+  });
+}
+
+export async function deleteSector(id) {
+  return apiRequest(`/sectores/${id}/`, {
+    method: 'DELETE',
   });
 }
 

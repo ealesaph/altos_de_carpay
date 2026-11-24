@@ -49,11 +49,17 @@ interface ApiService {
     @GET("sectores/{id}/")
     suspend fun getSector(@Path("id") id: Int): Response<SectorResponse>
 
+    @POST("sectores/")
+    suspend fun crearSector(@Body request: SectorCrearRequest): Response<SectorResponse>
+
     @PATCH("sectores/{id}/")
     suspend fun actualizarSector(
         @Path("id") id: Int,
         @Body body: Map<String, String>
     ): Response<SectorResponse>
+
+    @DELETE("sectores/{id}/")
+    suspend fun eliminarSector(@Path("id") id: Int): Response<Unit>
 
     // ── Servicios ──
 

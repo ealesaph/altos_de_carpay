@@ -3,7 +3,7 @@ import uuid
 from decimal import Decimal
 from django.conf import settings
 from django.core.files.storage import default_storage
-from django.db.models import DecimalField, Q, Sum, Value
+from django.db.models import DecimalField, ProtectedError, Q, Sum, Value
 from django.utils import timezone
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
@@ -42,6 +42,7 @@ class CatalogoViewSet(viewsets.ModelViewSet):
 
 class SectorViewSet(CatalogoViewSet):
     serializer_class = SectorSerializer
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def get_queryset(self):
         consulta = Sector.objects.all()
@@ -49,6 +50,32 @@ class SectorViewSet(CatalogoViewSet):
         if not (usuario.is_authenticated and usuario.es_admin):
             consulta = consulta.exclude(estado=Sector.Estado.INACTIVO)
         return consulta
+
+    def destroy(self, request, *args, **kwargs):
+        sector = self.get_object()
+        if sector.reservas_sector.filter(reserva__estado__in=services.ESTADOS_QUE_BLOQUEAN).exists():
+            return Response(
+                {
+                    "detail": (
+                        "No se puede eliminar este espacio porque aún hay reservas "
+                        "activas o pendientes que lo utilizan."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        try:
+            sector.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    "detail": (
+                        "No se puede eliminar este espacio porque tiene reservas o "
+                        "incidencias asociadas en el historial. Puedes marcarlo como Inactivo."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=True,

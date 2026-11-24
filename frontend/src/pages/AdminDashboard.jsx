@@ -21,6 +21,7 @@ import {
   Users,
   Upload,
   Shield,
+  Plus,
 } from 'lucide-react';
 import defaultSpaceImg from '../assets/default-space.svg';
 import { useConfirmacion } from '../components/ConfirmDialog.jsx';
@@ -29,7 +30,9 @@ import {
   cancelReservation,
   changeReservationStatus,
   createPayment,
+  createSector,
   createStaffAdmin,
+  deleteSector,
   exportReservationsCsv,
   exportarReporte,
   getConsultas,
@@ -89,6 +92,18 @@ export default function AdminDashboard() {
   });
   const [guardandoSector, setGuardandoSector] = useState(false);
   const [subiendoImagen, setSubiendoImagen] = useState(false);
+  const [mostrandoNuevoSector, setMostrandoNuevoSector] = useState(false);
+  const [nuevoSectorForm, setNuevoSectorForm] = useState({
+    nombre: '',
+    descripcion: '',
+    valor_hora: '',
+    estado: 'Disponible',
+    imagenUrl: '',
+  });
+  const [nuevoSectorArchivo, setNuevoSectorArchivo] = useState(null);
+  const [creandoSector, setCreandoSector] = useState(false);
+  const [eliminandoSectorId, setEliminandoSectorId] = useState(null);
+  const [cambiandoEstadoSectorId, setCambiandoEstadoSectorId] = useState(null);
 
   const [usuarios, setUsuarios] = useState([]);
   const [adminPerfil, setAdminPerfil] = useState(null);
@@ -227,6 +242,113 @@ export default function AdminDashboard() {
       setError(requestError.message);
     } finally {
       setGuardandoSector(false);
+    }
+  };
+
+  const crearNuevoSector = async (event) => {
+    event.preventDefault();
+    setError('');
+    setMensajeExito('');
+    setCreandoSector(true);
+    try {
+      const imagenLimpia = nuevoSectorForm.imagenUrl.trim();
+      let creado = await createSector({
+        nombre: nuevoSectorForm.nombre.trim(),
+        descripcion: nuevoSectorForm.descripcion.trim(),
+        valor_hora: nuevoSectorForm.valor_hora,
+        estado: nuevoSectorForm.estado,
+        fotografias: imagenLimpia ? [imagenLimpia] : [],
+      });
+      if (nuevoSectorArchivo) {
+        creado = await uploadSectorImage(creado.id_sector, nuevoSectorArchivo);
+      }
+      setSectores((actuales) =>
+        [...actuales, creado].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es')),
+      );
+      setNuevoSectorForm({
+        nombre: '',
+        descripcion: '',
+        valor_hora: '',
+        estado: 'Disponible',
+        imagenUrl: '',
+      });
+      setNuevoSectorArchivo(null);
+      setMostrandoNuevoSector(false);
+      notificar(`Espacio «${creado.nombre}» agregado correctamente.`);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setCreandoSector(false);
+    }
+  };
+
+  const eliminarSector = async (sector) => {
+    const acepta = await confirmar({
+      titulo: `¿Eliminar «${sector.nombre}»?`,
+      mensaje: (
+        <p>
+          El espacio se eliminará permanentemente del catálogo. Si ya tiene reservas o incidencias
+          registradas, no podrá eliminarse y deberás marcarlo como <strong>Inactivo</strong>.
+        </p>
+      ),
+      textoConfirmar: 'Eliminar espacio',
+      peligro: true,
+    });
+    if (!acepta) return;
+
+    setError('');
+    setMensajeExito('');
+    setEliminandoSectorId(sector.id_sector);
+    try {
+      await deleteSector(sector.id_sector);
+      setSectores((actuales) => actuales.filter((s) => s.id_sector !== sector.id_sector));
+      if (sectorEditandoId === sector.id_sector) {
+        setSectorEditandoId(null);
+      }
+      notificar(`Espacio «${sector.nombre}» eliminado correctamente.`);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setEliminandoSectorId(null);
+    }
+  };
+
+  const cambiarEstadoSector = async (sector, nuevoEstado) => {
+    const esInhabilitar = nuevoEstado === 'Inactivo';
+    const acepta = await confirmar({
+      titulo: esInhabilitar ? `¿Inhabilitar «${sector.nombre}»?` : `¿Habilitar «${sector.nombre}»?`,
+      mensaje: (
+        <p>
+          {esInhabilitar
+            ? 'El espacio dejará de mostrarse en el catálogo público y no recibirá nuevas reservas. Las reservas ya existentes no se cancelan.'
+            : 'El espacio volverá a mostrarse en el catálogo público como disponible para nuevas reservas.'}
+        </p>
+      ),
+      textoConfirmar: esInhabilitar ? 'Inhabilitar' : 'Habilitar',
+      peligro: esInhabilitar,
+    });
+    if (!acepta) return;
+
+    setError('');
+    setMensajeExito('');
+    setCambiandoEstadoSectorId(sector.id_sector);
+    try {
+      const actualizado = await updateSector(sector.id_sector, { estado: nuevoEstado });
+      setSectores((actuales) =>
+        actuales.map((s) => (s.id_sector === actualizado.id_sector ? actualizado : s)),
+      );
+      if (sectorEditandoId === actualizado.id_sector) {
+        setSectorForm((f) => ({ ...f, estado: actualizado.estado }));
+      }
+      notificar(
+        esInhabilitar
+          ? `Espacio «${actualizado.nombre}» inhabilitado.`
+          : `Espacio «${actualizado.nombre}» habilitado.`,
+      );
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setCambiandoEstadoSectorId(null);
     }
   };
 
@@ -994,14 +1116,151 @@ export default function AdminDashboard() {
               {(mostrarTodo || seccionActiva === 'catalogo') && (
                 <div className={`${seccionActiva === 'catalogo' ? 'lg:col-span-12' : 'lg:col-span-6'} space-y-6`}>
                   <div className="bg-white p-6 rounded-3xl border border-sand-200/80 shadow-sm space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="font-serif text-lg font-semibold text-forest-900">Catálogo y precios</h3>
-                      <span className="text-xs text-gray-500">Haz clic en un espacio para editarlo</span>
+                    <div className="flex flex-wrap justify-between items-center gap-2">
+                      <div>
+                        <h3 className="font-serif text-lg font-semibold text-forest-900">Catálogo y precios</h3>
+                        <span className="text-xs text-gray-500">Haz clic en un espacio para editarlo</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMostrandoNuevoSector((v) => !v);
+                          setError('');
+                        }}
+                        className="inline-flex items-center gap-1.5 bg-forest-800 text-white text-xs font-semibold px-3.5 py-2 rounded-xl hover:bg-forest-900"
+                      >
+                        <Plus size={14} />
+                        {mostrandoNuevoSector ? 'Cerrar' : 'Agregar espacio'}
+                      </button>
                     </div>
+
+                    {mostrandoNuevoSector && (
+                      <form
+                        onSubmit={crearNuevoSector}
+                        className="rounded-2xl border border-forest-800/30 bg-forest-50/30 p-4 space-y-3 text-xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-forest-900">Nuevo espacio</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="block text-gray-600">
+                            Nombre del espacio
+                            <input
+                              type="text"
+                              required
+                              placeholder="Ej: Quincho Norte"
+                              value={nuevoSectorForm.nombre}
+                              onChange={(e) => setNuevoSectorForm((f) => ({ ...f, nombre: e.target.value }))}
+                              className="w-full bg-white border border-sand-200 rounded-lg p-2 mt-1"
+                            />
+                          </label>
+                          <label className="block text-gray-600">
+                            Tarifa por hora (CLP)
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              required
+                              placeholder="25000"
+                              value={nuevoSectorForm.valor_hora}
+                              onChange={(e) => setNuevoSectorForm((f) => ({ ...f, valor_hora: e.target.value }))}
+                              className="w-full bg-white border border-sand-200 rounded-lg p-2 mt-1"
+                            />
+                          </label>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="block text-gray-600">
+                            Estado
+                            <select
+                              value={nuevoSectorForm.estado}
+                              onChange={(e) => setNuevoSectorForm((f) => ({ ...f, estado: e.target.value }))}
+                              className="w-full bg-white border border-sand-200 rounded-lg p-2 mt-1"
+                            >
+                              <option value="Disponible">Habilitado (Disponible)</option>
+                              <option value="Mantencion">En mantención</option>
+                              <option value="Inactivo">Inhabilitado (Inactivo)</option>
+                            </select>
+                          </label>
+                          <label className="block text-gray-600">
+                            Descripción
+                            <textarea
+                              rows={2}
+                              placeholder="Características y capacidad del espacio"
+                              value={nuevoSectorForm.descripcion}
+                              onChange={(e) => setNuevoSectorForm((f) => ({ ...f, descripcion: e.target.value }))}
+                              className="w-full bg-white border border-sand-200 rounded-lg p-2 mt-1 resize-y"
+                            />
+                          </label>
+                        </div>
+
+                        <div className="bg-white border border-sand-200 rounded-xl p-3 space-y-2">
+                          <label className="flex items-center gap-1.5 text-gray-600 font-medium">
+                            <ImageIcon size={13} />
+                            <span>Imagen (URL opcional o archivo)</span>
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            <input
+                              type="url"
+                              placeholder="https://ejemplo.com/espacio.jpg"
+                              value={nuevoSectorForm.imagenUrl}
+                              onChange={(e) => setNuevoSectorForm((f) => ({ ...f, imagenUrl: e.target.value }))}
+                              className="flex-1 min-w-[180px] bg-sand-50/40 border border-sand-200 rounded-lg p-2 text-xs"
+                            />
+                            <label className="inline-flex items-center gap-1 border border-forest-800/40 text-forest-900 bg-forest-50/60 hover:bg-forest-100 px-2.5 py-1.5 rounded-lg font-medium cursor-pointer shrink-0">
+                              <Upload size={13} />
+                              <span>{nuevoSectorArchivo ? nuevoSectorArchivo.name : 'Subir archivo'}</span>
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0] || null;
+                                  setNuevoSectorArchivo(file);
+                                }}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMostrandoNuevoSector(false);
+                              setNuevoSectorArchivo(null);
+                            }}
+                            className="border border-sand-300 text-gray-700 font-semibold px-3.5 py-2 rounded-xl hover:bg-sand-100"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={creandoSector}
+                            className="bg-forest-800 text-white font-semibold px-4 py-2 rounded-xl hover:bg-forest-900 disabled:opacity-50"
+                          >
+                            {creandoSector ? 'Creando…' : 'Crear espacio'}
+                          </button>
+                        </div>
+                      </form>
+                    )}
 
                     <div className="space-y-3">
                       {sectores.map((sector) => {
                         const seleccionado = sectorEditandoId === sector.id_sector;
+                        const estaHabilitado = sector.estado === 'Disponible';
+                        const badgeEstilo =
+                          sector.estado === 'Disponible'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : sector.estado === 'Mantencion'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-red-50 text-red-700 border-red-200';
+                        const badgeTexto =
+                          sector.estado === 'Disponible'
+                            ? 'Habilitado'
+                            : sector.estado === 'Mantencion'
+                              ? 'Mantención'
+                              : 'Inhabilitado';
                         return (
                           <div
                             key={sector.id_sector}
@@ -1009,26 +1268,53 @@ export default function AdminDashboard() {
                               seleccionado ? 'border-forest-800 bg-forest-50/30' : 'border-sand-200 bg-sand-50/30'
                             }`}
                           >
-                            <button
-                              type="button"
-                              onClick={() =>
-                                seleccionado ? setSectorEditandoId(null) : seleccionarSectorParaEditar(sector)
-                              }
-                              className="w-full text-left flex items-center justify-between p-3.5"
-                            >
-                              <span>
-                                <span className="font-semibold text-xs block text-gray-800">{sector.nombre}</span>
+                            <div className="flex items-center justify-between gap-2 p-3.5">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  seleccionado ? setSectorEditandoId(null) : seleccionarSectorParaEditar(sector)
+                                }
+                                className="flex-1 text-left min-w-0"
+                              >
+                                <span className="font-semibold text-xs block text-gray-800 truncate">{sector.nombre}</span>
                                 <span className="text-[11px] text-gray-500">
                                   ${Number(sector.valor_hora).toLocaleString('es-CL')} / hora
                                 </span>
-                              </span>
-                              <span className="flex items-center gap-2">
-                                <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-white border border-sand-200">
-                                  {sector.estado}
+                              </button>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border ${badgeEstilo}`}>
+                                  {badgeTexto}
                                 </span>
-                                {seleccionado ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                              </span>
-                            </button>
+                                <button
+                                  type="button"
+                                  disabled={cambiandoEstadoSectorId === sector.id_sector}
+                                  onClick={() =>
+                                    cambiarEstadoSector(sector, estaHabilitado ? 'Inactivo' : 'Disponible')
+                                  }
+                                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50 ${
+                                    estaHabilitado
+                                      ? 'border-red-200 text-red-700 bg-white hover:bg-red-50'
+                                      : 'border-emerald-200 text-emerald-800 bg-white hover:bg-emerald-50'
+                                  }`}
+                                >
+                                  {cambiandoEstadoSectorId === sector.id_sector
+                                    ? '…'
+                                    : estaHabilitado
+                                      ? 'Inhabilitar'
+                                      : 'Habilitar'}
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label={seleccionado ? 'Contraer' : 'Expandir'}
+                                  onClick={() =>
+                                    seleccionado ? setSectorEditandoId(null) : seleccionarSectorParaEditar(sector)
+                                  }
+                                  className="p-1 text-gray-600 hover:text-gray-900"
+                                >
+                                  {seleccionado ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                </button>
+                              </div>
+                            </div>
 
                             {seleccionado && (
                               <form onSubmit={guardarSector} className="px-4 pb-4 pt-2 border-t border-sand-200/80 space-y-3 text-xs">
@@ -1065,9 +1351,9 @@ export default function AdminDashboard() {
                                       onChange={(e) => setSectorForm((f) => ({ ...f, estado: e.target.value }))}
                                       className="w-full bg-white border border-sand-200 rounded-lg p-2 mt-1"
                                     >
-                                      <option value="Disponible">Disponible</option>
-                                      <option value="Mantencion">Mantención</option>
-                                      <option value="Inactivo">Inactivo</option>
+                                      <option value="Disponible">Habilitado (Disponible)</option>
+                                      <option value="Mantencion">En mantención</option>
+                                      <option value="Inactivo">Inhabilitado (Inactivo)</option>
                                     </select>
                                   </label>
                                   <label className="block text-gray-600">
@@ -1136,7 +1422,16 @@ export default function AdminDashboard() {
                                   </div>
                                 </div>
 
-                                <div className="flex justify-end gap-2 pt-1">
+                                <div className="flex flex-wrap justify-between items-center gap-2 pt-1">
+                                  <button
+                                    type="button"
+                                    disabled={eliminandoSectorId === sector.id_sector}
+                                    onClick={() => eliminarSector(sector)}
+                                    className="inline-flex items-center gap-1.5 border border-red-200 text-red-700 hover:bg-red-50 font-semibold px-3 py-2 rounded-xl disabled:opacity-50"
+                                  >
+                                    <Trash2 size={13} />
+                                    {eliminandoSectorId === sector.id_sector ? 'Eliminando…' : 'Eliminar espacio'}
+                                  </button>
                                   <button
                                     type="submit"
                                     disabled={guardandoSector}

@@ -11,6 +11,13 @@ data class SectorResponse(
     val estado: String
 )
 
+data class SectorCrearRequest(
+    val nombre: String,
+    val descripcion: String,
+    @SerializedName("valor_hora") val valorHora: String,
+    val estado: String = "Disponible"
+)
+
 data class ServicioResponse(
     @SerializedName("id_servicio") val idServicio: Int,
     val nombre: String,

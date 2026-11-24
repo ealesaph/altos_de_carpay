@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.altosdecarpay.app.data.model.BitacoraIncidenciaRequest
 import com.altosdecarpay.app.data.model.BitacoraIncidenciaResponse
 import com.altosdecarpay.app.data.model.LogModificacionResponse
+import com.altosdecarpay.app.data.model.SectorCrearRequest
 import com.altosdecarpay.app.data.model.SectorResponse
 import com.altosdecarpay.app.data.model.ServicioCrearRequest
 import com.altosdecarpay.app.data.model.ServicioResponse
@@ -55,6 +56,93 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
                     loadSectores()
                 }
             } catch (_: Exception) { }
+        }
+    }
+
+    fun actualizarSector(
+        id: Int,
+        nombre: String,
+        descripcion: String,
+        valorHora: String,
+        estado: String,
+        onResult: (Boolean, String?) -> Unit = { _, _ -> }
+    ) {
+        viewModelScope.launch {
+            try {
+                val cleanValor = valorHora.replace("$", "").replace(".", "").replace(",", "").trim()
+                val response = api.actualizarSector(
+                    id,
+                    mapOf(
+                        "nombre" to nombre.trim(),
+                        "descripcion" to descripcion.trim(),
+                        "valor_hora" to cleanValor.ifBlank { "0" },
+                        "estado" to estado
+                    )
+                )
+                if (response.isSuccessful) {
+                    loadSectores()
+                    onResult(true, null)
+                } else {
+                    val err = response.errorBody()?.string()?.takeIf { it.isNotBlank() }
+                        ?: "No se pudo actualizar el espacio (HTTP ${response.code()})"
+                    onResult(false, err)
+                }
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Error de conexión")
+            }
+        }
+    }
+
+    fun crearSector(
+        nombre: String,
+        descripcion: String,
+        valorHora: String,
+        estado: String = "Disponible",
+        onResult: (Boolean, String?) -> Unit = { _, _ -> }
+    ) {
+        viewModelScope.launch {
+            try {
+                val cleanValor = valorHora.replace("$", "").replace(".", "").replace(",", "").trim()
+                val response = api.crearSector(
+                    SectorCrearRequest(
+                        nombre = nombre.trim(),
+                        descripcion = descripcion.trim(),
+                        valorHora = cleanValor.ifBlank { "0" },
+                        estado = estado
+                    )
+                )
+                if (response.isSuccessful) {
+                    loadSectores()
+                    onResult(true, null)
+                } else {
+                    val err = response.errorBody()?.string()?.takeIf { it.isNotBlank() }
+                        ?: "No se pudo crear el espacio (HTTP ${response.code()})"
+                    onResult(false, err)
+                }
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Error de conexión")
+            }
+        }
+    }
+
+    fun eliminarSector(id: Int, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            try {
+                val response = api.eliminarSector(id)
+                if (response.isSuccessful) {
+                    loadSectores()
+                    onResult(true, null)
+                } else {
+                    val msg = if (response.code() == 409) {
+                        "No se puede eliminar este espacio porque tiene reservas o incidencias asociadas."
+                    } else {
+                        "No se pudo eliminar el espacio (HTTP ${response.code()})"
+                    }
+                    onResult(false, msg)
+                }
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Error de conexión")
+            }
         }
     }
 

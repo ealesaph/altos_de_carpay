@@ -86,3 +86,30 @@ class MejorasHU05HU08Tests(TestCase):
         self.api.force_authenticate(user=self.cliente)
         for ruta in ("/api/v1/usuarios/exportar/", "/api/v1/incidencias/exportar/", "/api/v1/reservas/exportar/"):
             self.assertEqual(self.api.get(ruta, {"formato": "xlsx"}).status_code, 403)
+
+    def test_admin_puede_agregar_y_eliminar_espacio_sin_reservas(self):
+        creado = self.api.post("/api/v1/sectores/", {
+            "nombre": "Quincho Nuevo",
+            "descripcion": "Sector techado con parrilla",
+            "valor_hora": "25000.00",
+            "estado": "Disponible",
+        }, format="json")
+        self.assertEqual(creado.status_code, 201)
+        id_sector = creado.data["id_sector"]
+        self.assertTrue(Sector.objects.filter(pk=id_sector).exists())
+
+        eliminado = self.api.delete(f"/api/v1/sectores/{id_sector}/")
+        self.assertEqual(eliminado.status_code, 204)
+        self.assertFalse(Sector.objects.filter(pk=id_sector).exists())
+
+    def test_admin_no_puede_eliminar_espacio_con_reservas(self):
+        r = self.api.delete(f"/api/v1/sectores/{self.jardin.pk}/")
+        self.assertEqual(r.status_code, 409)
+        self.assertTrue(Sector.objects.filter(pk=self.jardin.pk).exists())
+
+    def test_cliente_no_puede_agregar_ni_eliminar_espacios(self):
+        self.api.force_authenticate(user=self.cliente)
+        r_post = self.api.post("/api/v1/sectores/", {"nombre": "Otro", "valor_hora": "10000"}, format="json")
+        r_del = self.api.delete(f"/api/v1/sectores/{self.piscina.pk}/")
+        self.assertEqual(r_post.status_code, 403)
+        self.assertEqual(r_del.status_code, 403)
