@@ -24,6 +24,7 @@ Aplicación web React/Vite conectada a una API Django REST y PostgreSQL, orquest
 ### Accesos y Credenciales de Prueba (Seed Automático)
 
 * **Frontend Web (Nginx + React):** `http://localhost/`
+* **Frontend Web con HTTPS:** `https://localhost/` (puerto 443, certificado autofirmado generado al construir la imagen; el navegador muestra una advertencia la primera vez. En producción se reemplaza por un certificado de una autoridad reconocida montado en `/etc/nginx/certs`).
 * **Backend API REST:** `http://localhost:8000/api/v1/` (también proxy en `http://localhost/api/v1/`)
 * **Panel administrativo de la web:** `http://localhost/panel` (antes `/admin`; esa ruta ahora redirige al panel)
 * **Django Admin (uso interno):** `http://localhost/admin/`

@@ -56,6 +56,8 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      # HTTPS local con certificado autofirmado (cifrado en tránsito)
+      - "443:443"
     depends_on:
       - backend
     networks:

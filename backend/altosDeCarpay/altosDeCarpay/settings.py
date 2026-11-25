@@ -168,8 +168,8 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'altosDeCarpayApp.paginacion.Paginacion',
     'PAGE_SIZE': 20,
     'DEFAULT_THROTTLE_CLASSES': (
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle',
+        'altosDeCarpayApp.limites.LimiteAnonimo',
+        'altosDeCarpayApp.limites.LimiteUsuario',
     ),
     'DEFAULT_THROTTLE_RATES': {
         'anon': '60/min',
@@ -204,7 +204,7 @@ SIMPLE_JWT = {
 }
 
 
-_origenes_dev = 'http://localhost:5173,http://localhost:3000,http://localhost,http://127.0.0.1,http://10.0.2.2:8000' if DEBUG else ''
+_origenes_dev = 'http://localhost:5173,http://localhost:3000,http://localhost,https://localhost,http://127.0.0.1,https://127.0.0.1,http://10.0.2.2:8000' if DEBUG else ''
 CORS_ALLOWED_ORIGINS = env_lista('CORS_ALLOWED_ORIGINS', _origenes_dev)
 CORS_ALLOW_CREDENTIALS = False 
 CSRF_TRUSTED_ORIGINS = env_lista('CSRF_TRUSTED_ORIGINS', _origenes_dev)
