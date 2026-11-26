@@ -1,0 +1,77 @@
+[
+ {
+  "usuarios": 10,
+  "solicitudes": 100,
+  "errores": 0,
+  "pct_error": 0.0,
+  "rps": 107.6,
+  "prom": 89,
+  "p50": 51,
+  "p95": 435,
+  "p99": 445,
+  "max": 485,
+  "codigos": [
+   200
+  ]
+ },
+ {
+  "usuarios": 25,
+  "solicitudes": 250,
+  "errores": 0,
+  "pct_error": 0.0,
+  "rps": 235.6,
+  "prom": 97,
+  "p50": 111,
+  "p95": 143,
+  "p99": 151,
+  "max": 156,
+  "codigos": [
+   200
+  ]
+ },
+ {
+  "usuarios": 50,
+  "solicitudes": 500,
+  "errores": 0,
+  "pct_error": 0.0,
+  "rps": 232.2,
+  "prom": 191,
+  "p50": 193,
+  "p95": 309,
+  "p99": 322,
+  "max": 329,
+  "codigos": [
+   200
+  ]
+ },
+ {
+  "usuarios": 100,
+  "solicitudes": 1000,
+  "errores": 0,
+  "pct_error": 0.0,
+  "rps": 232.6,
+  "prom": 378,
+  "p50": 399,
+  "p95": 608,
+  "p99": 660,
+  "max": 692,
+  "codigos": [
+   200
+  ]
+ },
+ {
+  "usuarios": 200,
+  "solicitudes": 2000,
+  "errores": 0,
+  "pct_error": 0.0,
+  "rps": 232.0,
+  "prom": 764,
+  "p50": 795,
+  "p95": 1224,
+  "p99": 1299,
+  "max": 1323,
+  "codigos": [
+   200
+  ]
+ }
+]

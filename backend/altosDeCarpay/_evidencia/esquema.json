@@ -1,0 +1,1625 @@
+{
+ "usuario": {
+  "cols": [
+   [
+    "is_superuser",
+    "boolean",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "id_usuario",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "correo",
+    "character varying",
+    100,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "rut",
+    "character varying",
+    255,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "nombre",
+    "character varying",
+    50,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "apellido_paterno",
+    "character varying",
+    50,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "apellido_materno",
+    "character varying",
+    50,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "telefono",
+    "character varying",
+    255,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "password",
+    "character varying",
+    255,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "rol",
+    "character varying",
+    20,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "estado",
+    "character varying",
+    20,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "ultima_conexion",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "YES",
+    null
+   ],
+   [
+    "consentimiento_datos",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "YES",
+    null
+   ],
+   [
+    "consentimiento_version",
+    "character varying",
+    20,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "rut_hash",
+    "character varying",
+    64,
+    null,
+    null,
+    "NO",
+    null
+   ]
+  ],
+  "cons": [
+   [
+    "PRIMARY KEY",
+    "id_usuario",
+    null,
+    null,
+    "usuario_pkey"
+   ],
+   [
+    "UNIQUE",
+    "correo",
+    null,
+    null,
+    "usuario_correo_key"
+   ],
+   [
+    "UNIQUE",
+    "rut_hash",
+    null,
+    null,
+    "usuario_rut_hash_key"
+   ]
+  ],
+  "checks": [],
+  "idx": [
+   [
+    "usuario_pkey",
+    "CREATE UNIQUE INDEX usuario_pkey ON public.usuario USING btree (id_usuario)"
+   ],
+   [
+    "usuario_correo_key",
+    "CREATE UNIQUE INDEX usuario_correo_key ON public.usuario USING btree (correo)"
+   ],
+   [
+    "usuario_correo_5d0f2e9c_like",
+    "CREATE INDEX usuario_correo_5d0f2e9c_like ON public.usuario USING btree (correo varchar_pattern_ops)"
+   ],
+   [
+    "usuario_rut_hash_key",
+    "CREATE UNIQUE INDEX usuario_rut_hash_key ON public.usuario USING btree (rut_hash)"
+   ],
+   [
+    "usuario_rut_hash_3972ae67_like",
+    "CREATE INDEX usuario_rut_hash_3972ae67_like ON public.usuario USING btree (rut_hash varchar_pattern_ops)"
+   ]
+  ]
+ },
+ "sector": {
+  "cols": [
+   [
+    "id_sector",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "nombre",
+    "character varying",
+    50,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "descripcion",
+    "text",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "fotografias",
+    "jsonb",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "valor_hora",
+    "numeric",
+    null,
+    10,
+    2,
+    "NO",
+    null
+   ],
+   [
+    "estado",
+    "character varying",
+    20,
+    null,
+    null,
+    "NO",
+    null
+   ]
+  ],
+  "cons": [
+   [
+    "PRIMARY KEY",
+    "id_sector",
+    null,
+    null,
+    "sector_pkey"
+   ],
+   [
+    "UNIQUE",
+    "nombre",
+    null,
+    null,
+    "sector_nombre_key"
+   ]
+  ],
+  "checks": [],
+  "idx": [
+   [
+    "sector_pkey",
+    "CREATE UNIQUE INDEX sector_pkey ON public.sector USING btree (id_sector)"
+   ],
+   [
+    "sector_nombre_key",
+    "CREATE UNIQUE INDEX sector_nombre_key ON public.sector USING btree (nombre)"
+   ],
+   [
+    "sector_nombre_e4850c18_like",
+    "CREATE INDEX sector_nombre_e4850c18_like ON public.sector USING btree (nombre varchar_pattern_ops)"
+   ]
+  ]
+ },
+ "servicio": {
+  "cols": [
+   [
+    "id_servicio",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "nombre",
+    "character varying",
+    100,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "descripcion",
+    "character varying",
+    255,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "valor",
+    "numeric",
+    null,
+    10,
+    2,
+    "NO",
+    null
+   ],
+   [
+    "estado",
+    "character varying",
+    20,
+    null,
+    null,
+    "NO",
+    null
+   ]
+  ],
+  "cons": [
+   [
+    "PRIMARY KEY",
+    "id_servicio",
+    null,
+    null,
+    "servicio_pkey"
+   ],
+   [
+    "UNIQUE",
+    "nombre",
+    null,
+    null,
+    "servicio_nombre_key"
+   ]
+  ],
+  "checks": [],
+  "idx": [
+   [
+    "servicio_pkey",
+    "CREATE UNIQUE INDEX servicio_pkey ON public.servicio USING btree (id_servicio)"
+   ],
+   [
+    "servicio_nombre_key",
+    "CREATE UNIQUE INDEX servicio_nombre_key ON public.servicio USING btree (nombre)"
+   ],
+   [
+    "servicio_nombre_3eada211_like",
+    "CREATE INDEX servicio_nombre_3eada211_like ON public.servicio USING btree (nombre varchar_pattern_ops)"
+   ]
+  ]
+ },
+ "reserva": {
+  "cols": [
+   [
+    "id_reserva",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "fecha",
+    "date",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "hora_inicio",
+    "time without time zone",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "horas_reservadas",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "monto_total",
+    "numeric",
+    null,
+    10,
+    2,
+    "NO",
+    null
+   ],
+   [
+    "estado",
+    "character varying",
+    20,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "fecha_creacion",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "condiciones_aceptadas_en",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "YES",
+    null
+   ],
+   [
+    "token_qr",
+    "character varying",
+    64,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "id_usuario",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "cancelada_por",
+    "character varying",
+    10,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "devolucion_realizada_en",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "YES",
+    null
+   ],
+   [
+    "fecha_cancelacion",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "YES",
+    null
+   ],
+   [
+    "monto_devolucion",
+    "numeric",
+    null,
+    10,
+    2,
+    "NO",
+    null
+   ]
+  ],
+  "cons": [
+   [
+    "PRIMARY KEY",
+    "id_reserva",
+    null,
+    null,
+    "reserva_pkey"
+   ],
+   [
+    "UNIQUE",
+    "token_qr",
+    null,
+    null,
+    "reserva_token_qr_key"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_usuario",
+    "usuario",
+    "id_usuario",
+    "reserva_id_usuario_1c944924_fk_usuario_id_usuario"
+   ]
+  ],
+  "checks": [],
+  "idx": [
+   [
+    "reserva_pkey",
+    "CREATE UNIQUE INDEX reserva_pkey ON public.reserva USING btree (id_reserva)"
+   ],
+   [
+    "reserva_token_qr_key",
+    "CREATE UNIQUE INDEX reserva_token_qr_key ON public.reserva USING btree (token_qr)"
+   ],
+   [
+    "reserva_token_qr_b82bf81b_like",
+    "CREATE INDEX reserva_token_qr_b82bf81b_like ON public.reserva USING btree (token_qr varchar_pattern_ops)"
+   ],
+   [
+    "reserva_fecha_82a429_idx",
+    "CREATE INDEX reserva_fecha_82a429_idx ON public.reserva USING btree (fecha, estado)"
+   ],
+   [
+    "reserva_id_usuario_1c944924",
+    "CREATE INDEX reserva_id_usuario_1c944924 ON public.reserva USING btree (id_usuario)"
+   ]
+  ]
+ },
+ "reserva_sector": {
+  "cols": [
+   [
+    "id",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "horas",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "valor_hora",
+    "numeric",
+    null,
+    10,
+    2,
+    "NO",
+    null
+   ],
+   [
+    "id_reserva",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "id_sector",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ]
+  ],
+  "cons": [
+   [
+    "PRIMARY KEY",
+    "id",
+    null,
+    null,
+    "reserva_sector_pkey"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_reserva",
+    "reserva",
+    "id_reserva",
+    "reserva_sector_id_reserva_61814d1a_fk_reserva_id_reserva"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_sector",
+    "sector",
+    "id_sector",
+    "reserva_sector_id_sector_eb176adb_fk_sector_id_sector"
+   ],
+   [
+    "UNIQUE",
+    "id_reserva",
+    null,
+    null,
+    "uq_reserva_sector"
+   ],
+   [
+    "UNIQUE",
+    "id_sector",
+    null,
+    null,
+    "uq_reserva_sector"
+   ]
+  ],
+  "checks": [],
+  "idx": [
+   [
+    "reserva_sector_pkey",
+    "CREATE UNIQUE INDEX reserva_sector_pkey ON public.reserva_sector USING btree (id)"
+   ],
+   [
+    "uq_reserva_sector",
+    "CREATE UNIQUE INDEX uq_reserva_sector ON public.reserva_sector USING btree (id_reserva, id_sector)"
+   ],
+   [
+    "reserva_sector_id_reserva_61814d1a",
+    "CREATE INDEX reserva_sector_id_reserva_61814d1a ON public.reserva_sector USING btree (id_reserva)"
+   ],
+   [
+    "reserva_sector_id_sector_eb176adb",
+    "CREATE INDEX reserva_sector_id_sector_eb176adb ON public.reserva_sector USING btree (id_sector)"
+   ]
+  ]
+ },
+ "reserva_servicio": {
+  "cols": [
+   [
+    "id",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "cantidad",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "valor_unitario",
+    "numeric",
+    null,
+    10,
+    2,
+    "NO",
+    null
+   ],
+   [
+    "id_reserva",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "id_servicio",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ]
+  ],
+  "cons": [
+   [
+    "PRIMARY KEY",
+    "id",
+    null,
+    null,
+    "reserva_servicio_pkey"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_reserva",
+    "reserva",
+    "id_reserva",
+    "reserva_servicio_id_reserva_67adb0c6_fk_reserva_id_reserva"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_servicio",
+    "servicio",
+    "id_servicio",
+    "reserva_servicio_id_servicio_98462ac2_fk_servicio_id_servicio"
+   ],
+   [
+    "UNIQUE",
+    "id_reserva",
+    null,
+    null,
+    "uq_reserva_servicio"
+   ],
+   [
+    "UNIQUE",
+    "id_servicio",
+    null,
+    null,
+    "uq_reserva_servicio"
+   ]
+  ],
+  "checks": [],
+  "idx": [
+   [
+    "reserva_servicio_pkey",
+    "CREATE UNIQUE INDEX reserva_servicio_pkey ON public.reserva_servicio USING btree (id)"
+   ],
+   [
+    "uq_reserva_servicio",
+    "CREATE UNIQUE INDEX uq_reserva_servicio ON public.reserva_servicio USING btree (id_reserva, id_servicio)"
+   ],
+   [
+    "reserva_servicio_id_reserva_67adb0c6",
+    "CREATE INDEX reserva_servicio_id_reserva_67adb0c6 ON public.reserva_servicio USING btree (id_reserva)"
+   ],
+   [
+    "reserva_servicio_id_servicio_98462ac2",
+    "CREATE INDEX reserva_servicio_id_servicio_98462ac2 ON public.reserva_servicio USING btree (id_servicio)"
+   ]
+  ]
+ },
+ "pago": {
+  "cols": [
+   [
+    "id_pago",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "monto",
+    "numeric",
+    null,
+    10,
+    2,
+    "NO",
+    null
+   ],
+   [
+    "tipo_pago",
+    "character varying",
+    10,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "metodo_pago",
+    "character varying",
+    20,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "transaccion_id",
+    "character varying",
+    100,
+    null,
+    null,
+    "YES",
+    null
+   ],
+   [
+    "estado_pago",
+    "character varying",
+    20,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "fecha_pago",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "id_reserva",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ]
+  ],
+  "cons": [
+   [
+    "PRIMARY KEY",
+    "id_pago",
+    null,
+    null,
+    "pago_pkey"
+   ],
+   [
+    "UNIQUE",
+    "transaccion_id",
+    null,
+    null,
+    "pago_transaccion_id_key"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_reserva",
+    "reserva",
+    "id_reserva",
+    "pago_id_reserva_941b3aa9_fk_reserva_id_reserva"
+   ]
+  ],
+  "checks": [],
+  "idx": [
+   [
+    "pago_pkey",
+    "CREATE UNIQUE INDEX pago_pkey ON public.pago USING btree (id_pago)"
+   ],
+   [
+    "pago_transaccion_id_key",
+    "CREATE UNIQUE INDEX pago_transaccion_id_key ON public.pago USING btree (transaccion_id)"
+   ],
+   [
+    "pago_transaccion_id_af6450a3_like",
+    "CREATE INDEX pago_transaccion_id_af6450a3_like ON public.pago USING btree (transaccion_id varchar_pattern_ops)"
+   ],
+   [
+    "pago_id_reserva_941b3aa9",
+    "CREATE INDEX pago_id_reserva_941b3aa9 ON public.pago USING btree (id_reserva)"
+   ]
+  ]
+ },
+ "validacion_acceso": {
+  "cols": [
+   [
+    "id_validacion",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "token_qr",
+    "character varying",
+    64,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "tipo_registro",
+    "character varying",
+    10,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "fecha_hora",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "minutos_excedidos",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "cargo_sobretiempo_propuesto",
+    "numeric",
+    null,
+    10,
+    2,
+    "NO",
+    null
+   ],
+   [
+    "id_reserva",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "validado_por",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ]
+  ],
+  "cons": [
+   [
+    "PRIMARY KEY",
+    "id_validacion",
+    null,
+    null,
+    "validacion_acceso_pkey"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_reserva",
+    "reserva",
+    "id_reserva",
+    "validacion_acceso_id_reserva_9e2891a2_fk_reserva_id_reserva"
+   ],
+   [
+    "FOREIGN KEY",
+    "validado_por",
+    "usuario",
+    "id_usuario",
+    "validacion_acceso_validado_por_e51ae98b_fk_usuario_id_usuario"
+   ]
+  ],
+  "checks": [],
+  "idx": [
+   [
+    "validacion_acceso_pkey",
+    "CREATE UNIQUE INDEX validacion_acceso_pkey ON public.validacion_acceso USING btree (id_validacion)"
+   ],
+   [
+    "validacion_acceso_id_reserva_9e2891a2",
+    "CREATE INDEX validacion_acceso_id_reserva_9e2891a2 ON public.validacion_acceso USING btree (id_reserva)"
+   ],
+   [
+    "validacion_acceso_validado_por_e51ae98b",
+    "CREATE INDEX validacion_acceso_validado_por_e51ae98b ON public.validacion_acceso USING btree (validado_por)"
+   ]
+  ]
+ },
+ "bitacora_incidencia": {
+  "cols": [
+   [
+    "id_incidencia",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "titulo",
+    "character varying",
+    120,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "descripcion",
+    "text",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "fecha_creacion",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "id_autor",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "id_reserva",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "area_no_contratada",
+    "boolean",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "id_sector",
+    "integer",
+    null,
+    32,
+    0,
+    "YES",
+    null
+   ]
+  ],
+  "cons": [
+   [
+    "PRIMARY KEY",
+    "id_incidencia",
+    null,
+    null,
+    "bitacora_incidencia_pkey"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_autor",
+    "usuario",
+    "id_usuario",
+    "bitacora_incidencia_id_autor_1a223bf9_fk_usuario_id_usuario"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_reserva",
+    "reserva",
+    "id_reserva",
+    "bitacora_incidencia_id_reserva_ac5040b9_fk_reserva_id_reserva"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_sector",
+    "sector",
+    "id_sector",
+    "bitacora_incidencia_id_sector_8f741154_fk_sector_id_sector"
+   ]
+  ],
+  "checks": [],
+  "idx": [
+   [
+    "bitacora_incidencia_pkey",
+    "CREATE UNIQUE INDEX bitacora_incidencia_pkey ON public.bitacora_incidencia USING btree (id_incidencia)"
+   ],
+   [
+    "bitacora_incidencia_id_autor_1a223bf9",
+    "CREATE INDEX bitacora_incidencia_id_autor_1a223bf9 ON public.bitacora_incidencia USING btree (id_autor)"
+   ],
+   [
+    "bitacora_incidencia_id_reserva_ac5040b9",
+    "CREATE INDEX bitacora_incidencia_id_reserva_ac5040b9 ON public.bitacora_incidencia USING btree (id_reserva)"
+   ],
+   [
+    "bitacora_incidencia_id_sector_8f741154",
+    "CREATE INDEX bitacora_incidencia_id_sector_8f741154 ON public.bitacora_incidencia USING btree (id_sector)"
+   ]
+  ]
+ },
+ "review": {
+  "cols": [
+   [
+    "id_review",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "calificacion",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "comentario",
+    "character varying",
+    255,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "fecha",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "id_evaluado",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "id_evaluador",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "id_reserva",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ]
+  ],
+  "cons": [
+   [
+    "PRIMARY KEY",
+    "id_review",
+    null,
+    null,
+    "review_pkey"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_evaluado",
+    "usuario",
+    "id_usuario",
+    "review_id_evaluado_1dffe43c_fk_usuario_id_usuario"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_evaluador",
+    "usuario",
+    "id_usuario",
+    "review_id_evaluador_73d04a2a_fk_usuario_id_usuario"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_reserva",
+    "reserva",
+    "id_reserva",
+    "review_id_reserva_f09016b0_fk_reserva_id_reserva"
+   ],
+   [
+    "UNIQUE",
+    "id_reserva",
+    null,
+    null,
+    "uq_review_reserva_evaluador"
+   ],
+   [
+    "UNIQUE",
+    "id_evaluador",
+    null,
+    null,
+    "uq_review_reserva_evaluador"
+   ]
+  ],
+  "checks": [],
+  "idx": [
+   [
+    "review_pkey",
+    "CREATE UNIQUE INDEX review_pkey ON public.review USING btree (id_review)"
+   ],
+   [
+    "uq_review_reserva_evaluador",
+    "CREATE UNIQUE INDEX uq_review_reserva_evaluador ON public.review USING btree (id_reserva, id_evaluador)"
+   ],
+   [
+    "review_id_evaluado_1dffe43c",
+    "CREATE INDEX review_id_evaluado_1dffe43c ON public.review USING btree (id_evaluado)"
+   ],
+   [
+    "review_id_evaluador_73d04a2a",
+    "CREATE INDEX review_id_evaluador_73d04a2a ON public.review USING btree (id_evaluador)"
+   ],
+   [
+    "review_id_reserva_f09016b0",
+    "CREATE INDEX review_id_reserva_f09016b0 ON public.review USING btree (id_reserva)"
+   ]
+  ]
+ },
+ "consulta": {
+  "cols": [
+   [
+    "id_consulta",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "asunto",
+    "character varying",
+    150,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "mensaje",
+    "text",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "fecha_envio",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "respuesta",
+    "text",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "fecha_respuesta",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "YES",
+    null
+   ],
+   [
+    "estado",
+    "character varying",
+    20,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "id_cliente",
+    "integer",
+    null,
+    32,
+    0,
+    "YES",
+    null
+   ],
+   [
+    "respondida_por",
+    "integer",
+    null,
+    32,
+    0,
+    "YES",
+    null
+   ],
+   [
+    "correo_contacto",
+    "character varying",
+    254,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "nombre_contacto",
+    "character varying",
+    120,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "telefono_contacto",
+    "character varying",
+    255,
+    null,
+    null,
+    "NO",
+    null
+   ]
+  ],
+  "cons": [
+   [
+    "PRIMARY KEY",
+    "id_consulta",
+    null,
+    null,
+    "consulta_pkey"
+   ],
+   [
+    "FOREIGN KEY",
+    "respondida_por",
+    "usuario",
+    "id_usuario",
+    "consulta_respondida_por_258bba38_fk_usuario_id_usuario"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_cliente",
+    "usuario",
+    "id_usuario",
+    "consulta_id_cliente_387ef7d6_fk_usuario_id_usuario"
+   ]
+  ],
+  "checks": [],
+  "idx": [
+   [
+    "consulta_pkey",
+    "CREATE UNIQUE INDEX consulta_pkey ON public.consulta USING btree (id_consulta)"
+   ],
+   [
+    "consulta_id_cliente_387ef7d6",
+    "CREATE INDEX consulta_id_cliente_387ef7d6 ON public.consulta USING btree (id_cliente)"
+   ],
+   [
+    "consulta_respondida_por_258bba38",
+    "CREATE INDEX consulta_respondida_por_258bba38 ON public.consulta USING btree (respondida_por)"
+   ]
+  ]
+ },
+ "logs_modificacion": {
+  "cols": [
+   [
+    "id_log",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "fecha",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "tabla_modificada",
+    "character varying",
+    50,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "id_registro",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "valor_previo",
+    "text",
+    null,
+    null,
+    null,
+    "YES",
+    null
+   ],
+   [
+    "valor_nuevo",
+    "text",
+    null,
+    null,
+    null,
+    "YES",
+    null
+   ],
+   [
+    "id_usuario",
+    "integer",
+    null,
+    32,
+    0,
+    "YES",
+    null
+   ]
+  ],
+  "cons": [
+   [
+    "PRIMARY KEY",
+    "id_log",
+    null,
+    null,
+    "logs_modificacion_pkey"
+   ],
+   [
+    "FOREIGN KEY",
+    "id_usuario",
+    "usuario",
+    "id_usuario",
+    "logs_modificacion_id_usuario_a3cf8e5f_fk_usuario_id_usuario"
+   ]
+  ],
+  "checks": [],
+  "idx": [
+   [
+    "logs_modificacion_pkey",
+    "CREATE UNIQUE INDEX logs_modificacion_pkey ON public.logs_modificacion USING btree (id_log)"
+   ],
+   [
+    "logs_modifi_tabla_m_53b6eb_idx",
+    "CREATE INDEX logs_modifi_tabla_m_53b6eb_idx ON public.logs_modificacion USING btree (tabla_modificada, id_registro)"
+   ],
+   [
+    "logs_modificacion_id_usuario_a3cf8e5f",
+    "CREATE INDEX logs_modificacion_id_usuario_a3cf8e5f ON public.logs_modificacion USING btree (id_usuario)"
+   ]
+  ]
+ },
+ "brecha_seguridad": {
+  "cols": [
+   [
+    "id_brecha",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "fecha_deteccion",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "descripcion",
+    "text",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "datos_afectados",
+    "character varying",
+    255,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "titulares_afectados",
+    "integer",
+    null,
+    32,
+    0,
+    "NO",
+    null
+   ],
+   [
+    "nivel_riesgo",
+    "character varying",
+    10,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "medidas_adoptadas",
+    "text",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "notificada_agencia",
+    "boolean",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "fecha_notificacion_agencia",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "YES",
+    null
+   ],
+   [
+    "notificados_titulares",
+    "boolean",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "fecha_registro",
+    "timestamp with time zone",
+    null,
+    null,
+    null,
+    "NO",
+    null
+   ],
+   [
+    "registrada_por",
+    "integer",
+    null,
+    32,
+    0,
+    "YES",
+    null
+   ]
+  ],
+  "cons": [
+   [
+    "PRIMARY KEY",
+    "id_brecha",
+    null,
+    null,
+    "brecha_seguridad_pkey"
+   ],
+   [
+    "FOREIGN KEY",
+    "registrada_por",
+    "usuario",
+    "id_usuario",
+    "brecha_seguridad_registrada_por_b5976e0f_fk_usuario_id_usuario"
+   ]
+  ],
+  "checks": [
+   [
+    "CHECK ((titulares_afectados >= 0))",
+    "brecha_seguridad_titulares_afectados_check"
+   ]
+  ],
+  "idx": [
+   [
+    "brecha_seguridad_pkey",
+    "CREATE UNIQUE INDEX brecha_seguridad_pkey ON public.brecha_seguridad USING btree (id_brecha)"
+   ],
+   [
+    "brecha_seguridad_registrada_por_b5976e0f",
+    "CREATE INDEX brecha_seguridad_registrada_por_b5976e0f ON public.brecha_seguridad USING btree (registrada_por)"
+   ]
+  ]
+ }
+}
