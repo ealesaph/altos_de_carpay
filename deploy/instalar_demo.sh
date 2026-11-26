@@ -16,7 +16,7 @@ set -euo pipefail
 REPO="${REPO:-https://github.com/ealesaph/altos_de_carpay.git}"
 RAMA="${RAMA:-qa}"
 DIR="${DIR:-$HOME/altos_de_carpay}"
-COMPOSE="docker compose -f docker-compose.yml -f deploy/docker-compose.demo.yml"
+COMPOSE="compose -f docker-compose.yml -f deploy/docker-compose.demo.yml"
 
 paso() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 aleatorio() { python3 -c "import secrets,string; print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(${1:-32})))"; }
