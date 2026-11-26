@@ -65,7 +65,8 @@ Al terminar muestra la dirección y las credenciales, que quedan guardadas en
 `~/credenciales_demo.txt` (solo las puede leer ese usuario). Si el repositorio es privado,
 `git clone` pedirá usuario y un *token* de GitHub (Settings → Developer settings → Personal access tokens).
 
-Opciones (se anteponen al comando):
+Opciones (se escriben justo antes de `bash`, por ejemplo
+`curl -fsSL https://raw.githubusercontent.com/ealesaph/altos_de_carpay/qa/deploy/instalar_demo.sh | RAMA=main bash`):
 - `RAMA=main` – desplegar otra rama.
 - `DOMINIO=demo.altosdecarpay.cl` – usar un dominio propio (su DNS debe apuntar a la IP).
 - `SMTP_HOST=smtp-relay.brevo.com SMTP_USUARIO=... SMTP_CLAVE=...` – enviar correos reales.

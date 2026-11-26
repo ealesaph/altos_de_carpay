@@ -8,7 +8,7 @@
 #  o, si el repositorio ya está clonado:
 #     bash deploy/instalar_demo.sh
 #
-#  Variables opcionales:  RAMA=qa  DOMINIO=midominio.cl  SMTP_HOST= SMTP_USUARIO= SMTP_CLAVE=
+#  Variables opcionales (antes de «bash»: ... | RAMA=main bash):  RAMA=qa  DOMINIO=midominio.cl  SMTP_HOST= SMTP_USUARIO= SMTP_CLAVE=
 #  El script se puede volver a ejecutar: no borra datos ni cambia las claves ya generadas.
 # =====================================================================================
 set -euo pipefail
