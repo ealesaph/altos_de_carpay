@@ -1,0 +1,40 @@
+# Ajustes para el servidor de demostración en la nube. Se usa SOBRE docker-compose.yml:
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.demo.yml up -d --build
+# Solo Caddy queda expuesto a Internet (puertos 80 y 443, con HTTPS automático).
+# La base de datos, Django y Nginx quedan en la red interna de Docker.
+services:
+  db:
+    ports: !reset []
+    restart: always
+
+  backend:
+    ports: !reset []
+    restart: always
+
+  frontend:
+    ports: !reset []
+    restart: always
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: carpay_caddy
+    restart: always
+    environment:
+      DOMINIO: ${DOMINIO:?Defina DOMINIO en el archivo .env de la raíz del proyecto}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - carpay_network
+
+volumes:
+  caddy_data:
+  caddy_config:

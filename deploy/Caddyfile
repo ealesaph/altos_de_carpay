@@ -1,0 +1,27 @@
+# Proxy de entrada del servidor de demostración (Caddy).
+# Obtiene y renueva solo el certificado HTTPS de Let's Encrypt para {$DOMINIO}
+# (por ejemplo 129-151-10-20.sslip.io) y reparte las solicitudes:
+#   /api, /admin, /static y /media  -> Django (backend:8000)
+#   todo lo demás                    -> web React servida por Nginx (frontend:80)
+# Caddy reemplaza X-Forwarded-For con la IP real del visitante; Django confía en 1 proxy (NUM_PROXIES=1).
+{$DOMINIO} {
+	encode zstd gzip
+
+	@backend path /api/* /admin/* /static/* /media/*
+	handle @backend {
+		reverse_proxy backend:8000
+	}
+	handle {
+		reverse_proxy frontend:80
+	}
+
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+	}
+	log {
+		output stdout
+		format console
+	}
+}

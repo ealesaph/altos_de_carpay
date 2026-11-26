@@ -17,6 +17,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Servidor de demostración en la nube (opcional): gradlew assembleDebug -PservidorDemo=https://1-2-3-4.sslip.io
+        // Sin la propiedad, la app usa el emulador (10.0.2.2) o el celular por USB, como siempre.
+        val servidorDemo = (project.findProperty("servidorDemo") as String?)?.trim().orEmpty()
+        buildConfigField("String", "SERVIDOR_DEMO", "\"$servidorDemo\"")
     }
 
     buildTypes {
@@ -33,6 +38,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

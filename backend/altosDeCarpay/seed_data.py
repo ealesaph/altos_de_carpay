@@ -10,6 +10,11 @@ from decimal import Decimal
 from django.utils import timezone
 from usuariosApp.privacidad import POLITICA_VERSION
 
+# Las claves se pueden definir por variable de entorno (por ejemplo, en un servidor de demostración público).
+# Si no se definen, se usan las claves de demostración documentadas en el README.
+CLAVE_ADMIN = os.environ.get('SEMILLA_CLAVE_ADMIN') or 'CarpayAdmin2026!'
+CLAVE_CLIENTE = os.environ.get('SEMILLA_CLAVE_CLIENTE') or 'ClientePass2026!'
+
 def seed():
     print("--- Verificando datos semilla ---")
     
@@ -17,21 +22,21 @@ def seed():
     if not Usuario.objects.filter(correo='admin@altosdecarpay.cl').exists():
         admin = Usuario.objects.create_superuser(
             correo='admin@altosdecarpay.cl',
-            password='CarpayAdmin2026!',
+            password=CLAVE_ADMIN,
             rut='11.111.111-1',
             nombre='Lucas',
             apellido_paterno='Ziebold',
             apellido_materno='Máximo',
             telefono='+56912345678'
         )
-        print("✓ Usuario Admin creado: admin@altosdecarpay.cl (Clave: CarpayAdmin2026!)")
+        print("✓ Usuario Admin creado: admin@altosdecarpay.cl")
     else:
         print("✓ Usuario Admin ya existe.")
 
     if not Usuario.objects.filter(correo='camila.rojas@gmail.com').exists():
         cliente = Usuario.objects.create_user(
             correo='camila.rojas@gmail.com',
-            password='ClientePass2026!',
+            password=CLAVE_CLIENTE,
             rut='22.222.222-2',
             nombre='Camila',
             apellido_paterno='Rojas',
@@ -40,7 +45,7 @@ def seed():
             consentimiento_datos=timezone.now(),
             consentimiento_version=POLITICA_VERSION,
         )
-        print("✓ Usuario Cliente creado: camila.rojas@gmail.com (Clave: ClientePass2026!)")
+        print("✓ Usuario Cliente creado: camila.rojas@gmail.com")
     else:
         print("✓ Usuario Cliente ya existe.")
 

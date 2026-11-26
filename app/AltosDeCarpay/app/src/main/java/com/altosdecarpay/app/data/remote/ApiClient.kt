@@ -2,6 +2,7 @@ package com.altosdecarpay.app.data.remote
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.altosdecarpay.app.BuildConfig
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -16,7 +17,9 @@ object ApiClient {
     // Celular conectado por USB: 127.0.0.1 llega al PC con `adb reverse tcp:8000 tcp:8000` (y tcp:80 para la web).
     // Por Wi-Fi se configura la IP local del PC desde «Servidor» en la pantalla de inicio de sesión.
     const val URL_DISPOSITIVO_USB = "http://127.0.0.1:8000/api/v1/"
-    val DEFAULT_BASE_URL: String get() = if (esEmulador()) URL_EMULADOR else URL_DISPOSITIVO_USB
+    // Si la app se compiló con -PservidorDemo=https://…, ese servidor en la nube es el predeterminado.
+    private val URL_DEMO: String? get() = BuildConfig.SERVIDOR_DEMO.takeIf { it.isNotBlank() }?.let { normalizarUrl(it) }
+    val DEFAULT_BASE_URL: String get() = URL_DEMO ?: if (esEmulador()) URL_EMULADOR else URL_DISPOSITIVO_USB
     private const val PREF_KEY_BASE_URL = "custom_base_url"
 
     private var retrofit: Retrofit? = null
