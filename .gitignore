@@ -21,3 +21,6 @@ local.properties
 pruebas/resultados/*
 !pruebas/resultados/.gitkeep
 __pycache__/
+
+# APK de demostración generado localmente
+deploy/apk/
