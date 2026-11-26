@@ -16,3 +16,8 @@ local.properties
 
 # Variables de entorno con credenciales (no versionar)
 .env
+
+# Registros generados al ejecutar las pruebas (pruebas/ejecutar_pruebas.ps1)
+pruebas/resultados/*
+!pruebas/resultados/.gitkeep
+__pycache__/

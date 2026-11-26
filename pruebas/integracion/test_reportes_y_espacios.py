@@ -10,7 +10,7 @@ from openpyxl import load_workbook
 from rest_framework.test import APIClient
 
 from usuariosApp.models import Usuario
-from .models import BitacoraIncidencia, Reserva, ReservaSector, Sector
+from reservasApp.models import BitacoraIncidencia, Reserva, ReservaSector, Sector
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")

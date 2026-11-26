@@ -6,8 +6,8 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 from usuariosApp.models import Usuario
-from .emails import enviar_correo_reserva
-from .models import Pago, Reserva, ReservaSector, ReservaServicio, Sector, Servicio
+from reservasApp.emails import enviar_correo_reserva
+from reservasApp.models import Pago, Reserva, ReservaSector, ReservaServicio, Sector, Servicio
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")

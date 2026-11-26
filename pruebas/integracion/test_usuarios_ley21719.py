@@ -3,8 +3,8 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from auditoriaApp.models import BrechaSeguridad
-from .models import Usuario
-from .privacidad import POLITICA_VERSION
+from usuariosApp.models import Usuario
+from usuariosApp.privacidad import POLITICA_VERSION
 
 
 class Ley21719Tests(TestCase):

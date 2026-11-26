@@ -11,7 +11,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from usuariosApp.models import Usuario
-from .models import Reserva, ReservaSector, Sector, Servicio
+from reservasApp.models import Reserva, ReservaSector, Sector, Servicio
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")

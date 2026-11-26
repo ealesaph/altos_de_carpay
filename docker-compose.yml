@@ -39,6 +39,8 @@ services:
       NUM_PROXIES: 1
     volumes:
       - ./backend/altosDeCarpay:/app
+      # Carpeta de pruebas del proyecto (pruebas/), disponible en el contenedor como /app/pruebas
+      - ./pruebas:/app/pruebas
     ports:
       - "8000:8000"
     depends_on:

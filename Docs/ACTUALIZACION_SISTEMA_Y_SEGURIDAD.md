@@ -103,4 +103,4 @@ Cambios para resolver las 16 observaciones de la reunión con el cliente Joaquí
 
 ### 4.4 Verificación
 
-`reservasApp/tests_observaciones.py` agrega 11 pruebas (una por observación y el bloqueo de inicio de sesión). La suite completa pasa: 35 de 35.
+`pruebas/regresion/test_observaciones_cliente.py` (antes `reservasApp/tests_observaciones.py`) agrega 11 pruebas (una por observación y el bloqueo de inicio de sesión). La suite completa pasa: 35 de 35.

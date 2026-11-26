@@ -98,8 +98,9 @@ Las reglas acordadas con el cliente en la revisión del prototipo (23-11-2026) e
 
 ## Pruebas automáticas
 
-```powershell
-docker exec carpay_backend python manage.py test
-```
+Todas las pruebas están en la carpeta [`pruebas/`](pruebas/README.md), ordenadas por tipo (unitarias, integración, sistema, regresión, rendimiento y seguridad). El manual con cada comando y para qué sirve está en `pruebas/README.md`.
 
-La suite tiene 35 pruebas; `reservasApp/tests_observaciones.py` cubre las correcciones pedidas por el cliente.
+```powershell
+.\pruebas\ejecutar_pruebas.ps1 todas        # o: unitarias | integracion | sistema | regresion | rendimiento | estres | seguridad
+docker exec carpay_backend python manage.py test pruebas   # suite automática completa (93 pruebas)
+```

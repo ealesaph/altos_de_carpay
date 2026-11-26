@@ -1,4 +1,4 @@
-"""Prueba de humo de la API que consume la aplicación móvil (solo lectura).
+"""PRUEBA DE SISTEMA (humo) · API que consume la aplicación móvil Android (solo lectura).
 
 Recorre los endpoints GET que llama la app (ApiService.kt) con un token de cliente y
 uno de administrador generados en el servidor (sin contraseñas), y verifica los
@@ -14,7 +14,10 @@ from reservasApp.models import Reserva
 
 BASE = 'http://127.0.0.1:8000/api/v1/'
 admin = Usuario.objects.filter(rol='Admin', estado='Activo').order_by('id_usuario').first()
-res = Reserva.objects.filter(usuario__rol='Cliente').order_by('-id_reserva').first()
+# Se usa la última reserva CONFIRMADA de un cliente: sobre ella el administrador puede simular la
+# cancelación (200) y el cliente no (403). Si no hay ninguna, se usa la última reserva de un cliente.
+res = (Reserva.objects.filter(usuario__rol='Cliente', estado='Confirmado').order_by('-id_reserva').first()
+       or Reserva.objects.filter(usuario__rol='Cliente').order_by('-id_reserva').first())
 cliente = res.usuario
 tok = lambda u: str(RefreshToken.for_user(u).access_token)
 TA, TC = tok(admin), tok(cliente)
@@ -63,3 +66,5 @@ for perfil, nombre, ruta, t, esperado in casos:
     print(f"{perfil:<10}{nombre:<32}{c:>6}{ms:>8.0f}  {'APROBADO' if bien else 'FALLA (esperado ' + str(esperado) + ')'}")
 print('-' * 66)
 print(f'Resultado: {ok} de {len(casos)} verificaciones aprobadas')
+
+sys.exit(0 if ok == len(casos) else 1)

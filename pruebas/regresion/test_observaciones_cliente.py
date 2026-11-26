@@ -13,8 +13,8 @@ from rest_framework.test import APIClient
 
 from consultasApp.models import Consulta
 from usuariosApp.models import Usuario
-from .models import Pago, Reserva, ReservaSector, Sector
-from .services import cerrar_reservas_vencidas
+from reservasApp.models import Pago, Reserva, ReservaSector, Sector
+from reservasApp.services import cerrar_reservas_vencidas
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")

@@ -1,4 +1,4 @@
-"""Prueba de protección: ráfaga de solicitudes anónimas contra el servidor normal (puerto 8000).
+"""PRUEBA DE SEGURIDAD · Avalancha de 150 solicitudes anónimas contra el servidor (puerto 8000).
 Verifica que el límite de 60 solicitudes por minuto por IP responda HTTP 429 ante una avalancha."""
 import time, urllib.request, urllib.error, collections
 from concurrent.futures import ThreadPoolExecutor

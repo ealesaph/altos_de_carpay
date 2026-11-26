@@ -68,8 +68,15 @@ for n in ETAPAS:
     resultados.append(fila)
     print(f"{n:>8} {fila['solicitudes']:>8} {err:>8} {fila['pct_error']:>7}% {fila['rps']:>8} {fila['prom']:>8} {fila['p50']:>8} {fila['p95']:>8} {fila['p99']:>8} {fila['max']:>8}")
     time.sleep(2)
-os.makedirs('/app/_evidencia', exist_ok=True)
-json.dump(resultados, open('/app/_evidencia/estres.json', 'w'), indent=1)
+os.makedirs('/app/pruebas/resultados', exist_ok=True)
+json.dump(resultados, open('/app/pruebas/resultados/estres.json', 'w'), indent=1)
 tot = sum(r['solicitudes'] for r in resultados); terr = sum(r['errores'] for r in resultados)
 print('-' * 92)
-print(f' Total: {tot} solicitudes, {terr} errores. Resultados guardados en _evidencia/estres.json')
+print(f' Total: {tot} solicitudes, {terr} errores. Resultados guardados en pruebas/resultados/estres.json')
+
+# Criterio de aceptación (RNF-03): sin errores y percentil 95 bajo 2 segundos en todas las etapas.
+UMBRAL_MS = int(os.environ.get('ESTRES_UMBRAL_MS', '2000'))
+aprobado = terr == 0 and all(r['p95'] < UMBRAL_MS for r in resultados)
+print(f" Criterio: 0 % de errores y p95 < {UMBRAL_MS} ms en cada etapa -> {'APROBADO' if aprobado else 'REVISAR'}")
+print('=' * 92)
+sys.exit(0 if aprobado else 1)

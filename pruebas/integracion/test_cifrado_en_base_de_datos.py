@@ -4,8 +4,8 @@ from django.db import connection
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from .cifrado import huella_rut
-from .models import Usuario
+from usuariosApp.cifrado import huella_rut
+from usuariosApp.models import Usuario
 
 
 class CifradoDatosPersonalesTests(TestCase):

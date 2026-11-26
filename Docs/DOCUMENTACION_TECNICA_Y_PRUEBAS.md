@@ -107,7 +107,7 @@ Pruebas ejecutadas directamente contra el despliegue Docker en ejecución (`http
 
 ### 3.1 Pruebas de las correcciones solicitadas por el cliente (23-11-2026)
 
-Pruebas automáticas en `reservasApp/tests_observaciones.py`, ejecutadas en el contenedor `carpay_backend` (`python manage.py test`: 35 de 35 aprobadas), más revisión en el navegador sobre `http://localhost/`:
+Pruebas automáticas en `pruebas/regresion/test_observaciones_cliente.py`, ejecutadas en el contenedor `carpay_backend` (`python manage.py test`: 35 de 35 aprobadas), más revisión en el navegador sobre `http://localhost/`:
 
 | # | Observación / Hallazgo | Caso de prueba | Resultado esperado | Estado |
 | :--- | :--- | :--- | :--- | :--- |
